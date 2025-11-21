@@ -1,0 +1,176 @@
+STANDALONE FILE-EXPLORER + MEDIA GALLERY WEBAPP
+(One single HTML file, no external libraries, works offline)
+------------------------------------------------------------
+
+============================
+
+1. CORE OBJECTIVE
+   ============================
+   Create a standalone HTML + CSS + JavaScript webapp (one .html file) that works 100% offline.
+   The webapp should function like a local file explorer + media gallery with folder navigation and a minimalist dark theme.
+
+============================
+2. FILE ACCESS + NAVIGATION
+===========================
+
+* Use: <input type="file" webkitdirectory> to select a root folder.
+* After selection:
+
+  * Read all subfolders and files recursively.
+  * Display like a file explorer:
+
+    * Folders first.
+    * Then media files.
+* Folder navigation:
+
+  * Click folder to enter.
+  * Back button.
+  * Breadcrumb path (like Windows Explorer). editable
+  * Smooth slide animation when changing folders.
+
+============================
+3. SUPPORTED MEDIA TYPES
+========================
+
+Images: jpg, jpeg, png, gif, webp
+Videos: mp4, webm, mov
+Audio: mp3, wav (use icon or waveform)
+
+============================
+4. UI DESIGN RULES
+==================
+
+* Minimalist dark theme.
+* Card-Based Masonry: clean grids, no borders, large spacing.
+* Responsive media grid:
+
+  * Landscape → wide rectangle.
+  * Portrait → tall rectangle.
+  * Square → square cell.
+* Works on mobile, desktop, and 4K.
+
+============================
+Hover / Interaction Ideas (pure CSS)
+============================
+* Overlay darkens → text appears (title, date, category)
+* Scale up slightly (1.03–1.05) + shadow intensify
+* Border color change or colored bottom bar slides up
+* Play button appears with pulsing animation for videos
+* Flip card effect (back side shows description/tags)
+* Ken Burns subtle zoom on image when hovered
+* Caption slides up from bottom of card
+* Aspect-ratio preserved using CSS aspect-ratio or padding-bottom hack
+
+============================
+5. FOLDER DISPLAY
+=================
+
+* Folders shown as:
+
+  * Rounded rectangles.
+  * Minimal folder icon.
+  * Folder name text.
+* Long names scroll on hover.
+
+============================
+6. THUMBNAIL BEHAVIOR
+=====================
+
+Images:
+
+* Show image thumbnail.
+
+Videos:
+
+* Show static thumbnail.
+* On hover → auto-play muted preview. button to toggle mute-unmutes
+* On mouse out → pause + return to thumbnail.
+
+Audio:
+
+* Show icon or simple waveform animation on hover.
+
+============================
+7. FULLSCREEN VIEWER
+====================
+
+When clicking any media:
+
+* Open fullscreen modal viewer.
+* Features:
+
+  * Next/Previous arrows.
+  * Play/Pause (for videos).
+  * Fullscreen toggle.
+  * Close button.
+
+* Keyboard shortcuts:
+
+  * ESC = close.
+  * Left/Right = navigate.
+  * Space = play/pause video.
+  * next video automatically play after current one finishes
+* Smooth fade/slide animations.
+
+============================
+8. SLIDESHOW MODE
+=================
+
+* Works for images + videos.
+* Default duration: 3 seconds per slide.
+* Videos auto-play.
+* After video ends → automatically go to next.
+
+============================
+9. PERFORMANCE REQUIREMENTS
+===========================
+
+* Lazy-load thumbnails.
+* Load full-resolution media only when opened.
+* Handle hundreds of files efficiently.
+* Low memory usage.
+* Use CSS animations for smoothness.
+
+============================
+10. EXTRA FEATURES
+==================
+
+Sorting:
+
+* By name
+* By type
+* By date
+
+View modes:
+
+* Grid view
+* List view
+
+File Info Popup:
+
+* Size
+* Last modified date
+* Image resolution
+
+============================
+11. HARD CONSTRAINTS
+====================
+
+* Entire app inside one .html file.
+* No external libraries (no React, jQuery, CDNs, etc.).
+* Must run offline locally.
+* Code must be clean, modular, and commented.
+* Minimalist visual style.
+
+============================
+12. FINAL OUTPUT REQUIRED
+=========================
+
+* Provide full standalone HTML code.
+* CSS in <style>.
+* JS in <script>.
+* No external dependencies.
+* Should run by simply opening the HTML file.
+
+---
+

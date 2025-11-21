@@ -1,0 +1,53 @@
+Here is a comprehensive prompt you can use to recreate this exact application in the future. It captures the specific design aesthetic, the technical architecture, and the crucial bug fixes (like the masonry scrolling issue) we implemented.
+
+***
+
+### **The "Perfect Prompt" for the Swiss Media Explorer**
+
+**Role:** Expert Front-End Developer & UI Designer (Specializing in Swiss International Style).
+
+**Task:** Create a single-file, standalone HTML/JS/CSS web application that functions as a **Local Media Explorer & Gallery**. The app must run entirely offline without external dependencies or libraries.
+
+**1. Core Technical Constraints:**
+* **Single File:** All HTML, CSS, and JavaScript must be contained in one `.html` file.
+* **Input Method:** Use `<input type="file" webkitdirectory directory multiple>` to select a root folder.
+* **File System:** Parse `file.webkitRelativePath` to build a virtual file system tree in memory. Do not list all files flat; preserve the folder hierarchy.
+* **Performance:** Use `IntersectionObserver` to lazy-load media. Use `URL.createObjectURL()` for rendering assets. Clean up memory where possible.
+
+**2. Design System (Swiss International Style):**
+* **Theme:** Strict Dark Mode. Background: `#050505`, Cards: `#111111`, Text: `#FFFFFF` & `#999999`.
+* **Typography:** Neo-Grotesque (Helvetica Neue, Arial). High contrast, tight letter-spacing, clean hierarchy.
+* **Accent Color:** Swiss Red (`#FF3B30`) used sparingly for focus states and key actions.
+* **Layout Strategy (Crucial):**
+    * Use **CSS Columns** (`column-count: 5` responsive down to 1) to create a **Masonry Layout**.
+    * **Important:** To prevent horizontal scrolling glitches with CSS columns, separate the logic into two containers:
+        * `#scroll-container`: Handles `overflow-y: auto` and `height: 100%`.
+        * `#main-view`: Lives inside the scroll container, holds the columns, and has no fixed height.
+* **Aesthetics:** Sharp edges (0px border-radius), minimal borders, no visual clutter.
+
+**3. Functional Requirements:**
+* **Navigation:**
+    * Breadcrumb bar (Windows Explorer style) showing the current path.
+    * "Up" button to go to the parent directory.
+    * Folder cards: Click to enter directory.
+* **Media Cards:**
+    * **Images:** Display thumbnail preserving original aspect ratio (no cropping).
+    * **Videos:** Display static poster. On **Hover**: Auto-play muted video loop. On **Mouseout**: Pause and reset. Include a floating "Mute/Unmute" toggle button on the card that appears on hover.
+    * **Audio:** Display a CSS-only animated waveform visualizer.
+* **Sorting & Filtering:**
+    * Sort by Name, Date, Size, Type.
+    * Real-time text search filtering.
+* **View Modes:** Toggle between Masonry Grid and List View.
+
+**4. Lightbox (Fullscreen Viewer):**
+* Clicking a file opens a full-screen modal.
+* **Features:** Next/Prev controls, Keyboard navigation (Arrows, ESC, Space), Slideshow mode (auto-advance every 3s), Fullscreen toggle.
+* **UI:** Controls should fade out when inactive. Show file metadata (Name, Date, Size, Resolution) at the bottom.
+
+**5. Code Quality:**
+* Use Modern Vanilla JS (ES6+).
+* Clean, modular code structure.
+* Handle window resize events for responsive column counts.
+* Ensure `webkit-user-select: none` for app-like feel.
+
+**Goal:** produce the code for `index.html` that is ready to run immediately.
