@@ -1,0 +1,24 @@
+Here are other popular design styles for media gallery websites (just names) such as
+Card-Based Masonry
+Duotone Photography Grid
+International Typographic Style (Swiss style)
+
+Brutalism
+Neumorphism
+Glassmorphism
+Dark Mode Minimalism
+Cyberpunk / Y2K
+Memphis Design
+Bauhaus Revival
+Retro Vaporwave
+Split-Screen Asymmetry
+Card-Based Masonry
+Full-Screen Parallax
+Editorial Magazine Layout
+Japanese Wabi-Sabi
+Scandinavian Minimalism
+Art Deco Revival
+Material Design
+Framer Motion Kinetic
+3D Isometric
+Blob / Organic Shapes

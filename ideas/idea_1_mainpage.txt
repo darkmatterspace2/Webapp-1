@@ -1,0 +1,15 @@
+main page of the website (name: )which links to several web applications. apps will be another html files.
+apps that need to be featured can be following (app names can be simplied, you can name them as you deem corect):
+1.image/video Gallery
+2.file explorer Modern Design
+3.portfolio dashboard
+4.stock Wishlist
+5.splitscreen video playback
+6.video cutter app
+7.resume website
+8.clone of futuretimeline website
+9.clone of 4chan
+and 11 other apps
+there will windows start menu or andorid app drawer like icons. when I click on any of the icon. th web page opens in new tab. bento style grid (enough for 20 apps). dark mode. modern. minimalist. color/fonts scheme should be cyberpunk with wide variety of colors in grids/tiles/backgound.
+leave scope of adding more apps in future. 
+make a standalone html
