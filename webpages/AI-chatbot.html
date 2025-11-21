@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Model Simulator</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gemini-blue: #4285F4;
+            --ai-bg: #E8F0FE;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .chat-container {
+            max-width: 600px;
+            height: 95vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .message-box {
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            max-width: 85%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        .user-message {
+            background-color: var(--gemini-blue);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: var(--ai-bg);
+            color: #333;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        #chat-history {
+            scroll-behavior: smooth;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--gemini-blue);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 10px 0;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables for use in the main script
+        window.app = null;
+        window.db = null;
+        window.auth = null;
+        window.userId = 'guest';
+
+        // 1. Mandatory Global Variable Checks
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        if (firebaseConfig) {
+            setLogLevel('Debug');
+            window.app = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.app);
+            window.auth = getAuth(window.app);
+
+            // 2. Mandatory Authentication Process
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    window.userId = user.uid;
+                    document.getElementById('status-message').textContent = `User: ${window.userId.substring(0, 8)}...`;
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(window.auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(window.auth);
+                        }
+                    } catch (error) {
+                        console.error("Firebase Auth Error:", error);
+                        document.getElementById('status-message').textContent = 'Authentication Failed.';
+                    }
+                }
+            });
+        } else {
+             document.getElementById('status-message').textContent = 'Running in guest mode (No Firebase Config).';
+        }
+    </script>
+</head>
+<body class="p-4">
+
+    <div class="chat-container bg-white rounded-xl overflow-hidden">
+        <!-- Header -->
+        <div class="p-4 border-b bg-gray-50 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-gray-800">Model Chat Simulator</h1>
+            <div id="status-message" class="text-xs text-gray-500">Initializing...</div>
+        </div>
+
+        <!-- Settings & Warning -->
+        <div class="p-4 bg-yellow-50 text-yellow-800 text-sm border-b border-yellow-200">
+            <label for="model-select" class="block font-medium mb-1">Select Model:</label>
+            <select id="model-select" class="w-full p-2 border border-yellow-300 rounded-lg bg-white shadow-sm focus:ring-yellow-500 focus:border-yellow-500">
+                <!-- Options populated via JavaScript -->
+            </select>
+            <p class="mt-2 font-semibold">
+                ⚠️ Backend Notice: All chat responses are generated using the **Gemini 2.5 Flash** model, regardless of the selection above.
+            </p>
+        </div>
+
+        <!-- Chat History -->
+        <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4">
+            <!-- Initial Message -->
+             <div class="message-box ai-message text-gray-700">
+                Hello! Select your preferred model above (though I'll use Gemini 2.5 Flash to respond) and start chatting.
+            </div>
+            <!-- Messages will be injected here -->
+        </div>
+
+        <!-- Input and Controls -->
+        <div class="p-4 border-t bg-white">
+            <div class="flex items-center space-x-2 mb-3">
+                <button id="copy-button" onclick="copyChat()" class="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-full shadow-md hover:bg-purple-700 transition duration-150 active:scale-95">
+                    Copy Chat History
+                </button>
+            </div>
+            <div class="flex space-x-2">
+                <textarea id="user-input" class="flex-grow p-3 border border-gray-300 rounded-xl resize-none focus:ring-gemini-blue focus:border-gemini-blue" placeholder="Ask the AI a question..." rows="2"></textarea>
+                <button id="send-button" onclick="sendMessage()" class="bg-gemini-blue text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition duration-150 active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 transform rotate-90 translate-y-[-1px] translate-x-[-1px]">
+                        <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.543 60.543 0 0 0 18.44-5.833.75.75 0 0 0 0-1.342 60.543 60.543 0 0 0-18.44-5.833Z" />
+                    </svg>
+                </button>
+            </div>
+            <div id="loading-indicator" class="loader mx-auto hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data for the model selector, populated using search results
+        const modelsData = [
+            { name: "Gemini 2.5 Flash", version: "v2.5", classification: "Closed/Restrictive", modelId: "gemini-2.5-flash-preview-09-2025" },
+            { name: "ChatGPT-4o", version: "GPT-4o", classification: "Closed/Restrictive" },
+            { name: "Claude 3.5 Sonnet", version: "v3.5", classification: "Closed/Restrictive" },
+            { name: "Mixtral 8x22B", version: "8x22B", classification: "Open/Uncensored Weights" },
+            { name: "Llama 3", version: "70B", classification: "Open Weights/Restrictive Guardrails" },
+            { name: "Grok-1", version: "v1.0", classification: "Open Weights/Restrictive Service" },
+            { name: "Perplexity PPLX", version: "70B Online", classification: "Closed/Restrictive" },
+            { name: "Mistral Large", version: "v2.0", classification: "Closed/Restrictive" },
+        ];
+
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const modelSelect = document.getElementById('model-select');
+
+        /**
+         * Populates the model dropdown with classification and version information.
+         */
+        function populateModelSelect() {
+            modelsData.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = model.modelId || model.name;
+                option.textContent = `${model.name} (${model.version}) - ${model.classification}`;
+                if (index === 0) option.selected = true; // Select Gemini by default
+                modelSelect.appendChild(option);
+            });
+        }
+        window.onload = populateModelSelect;
+
+        /**
+         * Adds a message to the chat history UI.
+         * @param {string} text The message content.
+         * @param {('user'|'ai')} sender The sender of the message.
+         */
+        function addMessageToChat(text, sender) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `message-box ${sender}-message`;
+            messageWrapper.textContent = text;
+            chatHistoryDiv.appendChild(messageWrapper);
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        }
+
+        /**
+         * Copies the entire chat history content to the clipboard.
+         */
+        function copyChat() {
+            const messages = Array.from(chatHistoryDiv.children);
+            let fullText = "--- Conversation History ---\n";
+
+            messages.forEach(msg => {
+                const sender = msg.classList.contains('user-message') ? "You" : "AI";
+                fullText += `\n[${sender}]: ${msg.textContent}\n`;
+            });
+
+            // Use execCommand('copy') as navigator.clipboard might fail in some contexts (like iframes)
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = fullText;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+
+            try {
+                document.execCommand('copy');
+                alertBox('Chat history copied to clipboard!', 'success');
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+                alertBox('Failed to copy chat history.', 'error');
+            }
+            document.body.removeChild(tempTextarea);
+        }
+        window.copyChat = copyChat; // Expose to global scope for HTML onclick
+
+        /**
+         * Simple custom alert box implementation.
+         */
+        function alertBox(message, type) {
+            const existingAlert = document.getElementById('custom-alert');
+            if (existingAlert) existingAlert.remove();
+
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'custom-alert';
+            alertDiv.textContent = message;
+            alertDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-lg text-white text-sm transition-opacity duration-300 z-50`;
+
+            if (type === 'success') {
+                alertDiv.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                alertDiv.classList.add('bg-red-500');
+            } else {
+                alertDiv.classList.add('bg-gray-700');
+            }
+
+            document.body.appendChild(alertDiv);
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 3000);
+        }
+
+        /**
+         * Handles the API call to Gemini with exponential backoff.
+         * @param {string} prompt The user's query.
+         * @param {number} attempt Current retry attempt count.
+         */
+        async function fetchGeminiResponse(prompt, attempt = 0) {
+            const maxRetries = 3;
+            const apiKey = ""; // API key is provided by the canvas environment
+
+            // Configuration for the Gemini API call
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "You are a helpful and concise AI assistant, powered by Google's Gemini. Respond directly to the user's query." }]
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (text) {
+                    addMessageToChat(text, 'ai');
+                } else {
+                    addMessageToChat("Error: AI returned an empty response.", 'ai');
+                    console.error("AI Response Error:", result);
+                }
+
+            } catch (error) {
+                console.error("API Call Error:", error);
+                if (attempt < maxRetries) {
+                    const delay = Math.pow(2, attempt) * 1000;
+                    console.warn(`Retrying in ${delay / 1000}s... (Attempt ${attempt + 1})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await fetchGeminiResponse(prompt, attempt + 1);
+                } else {
+                    addMessageToChat("I'm sorry, I could not connect to the AI service after several retries. Please try again later.", 'ai');
+                }
+            } finally {
+                // Ensure loading state is handled only on the final outcome
+                if (attempt === 0 || attempt === maxRetries) {
+                    loadingIndicator.classList.add('hidden');
+                    sendButton.disabled = false;
+                }
+            }
+        }
+
+        /**
+         * Main function to handle sending a message.
+         */
+        async function sendMessage() {
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+
+            // Update UI state
+            addMessageToChat(prompt, 'user');
+            userInput.value = '';
+            sendButton.disabled = true;
+            loadingIndicator.classList.remove('hidden');
+
+            // Log the selected model (for demonstration)
+            const selectedModelInfo = modelSelect.options[modelSelect.selectedIndex].text;
+            console.log(`User selected: ${selectedModelInfo}. Sending prompt to Gemini 2.5 Flash...`);
+
+            // Check if authentication is complete before sending
+            if (window.auth && !window.auth.currentUser) {
+                // Wait for auth to complete or assume guest access is ready
+                // Since onAuthStateChanged is asynchronous, we trust it runs quickly.
+                // We'll proceed with the API call, as the auth is mainly for platform rules.
+            }
+
+            // Call the Gemini API function
+            await fetchGeminiResponse(prompt);
+        }
+        window.sendMessage = sendMessage; // Expose to global scope for HTML onclick
+
+        // Bind Enter key to send message
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+    </script>
+</body>
+</html>
+
