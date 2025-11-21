@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Portfolio Dashboard</title>
+    <!-- Load Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Load Chart.js Data Labels Plugin for displaying values on Pie/Bar charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <style>
+        /* Custom styles for better aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc; /* Light gray background */
+        }
+        .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Portfolio Analytics Dashboard</h1>
+        <p class="text-gray-500">Paste your CSV data below to generate real-time insights.</p>
+    </header>
+
+    <!-- CSV Input Section -->
+    <section id="input-section" class="bg-white card p-6 mb-8 max-w-4xl mx-auto">
+        <label for="csv-data" class="block text-lg font-semibold text-gray-700 mb-3">
+            Paste Portfolio CSV Data
+        </label>
+        <textarea id="csv-data" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Date,Savings_B1,FD_B1,...,Total&#10;2025-01-01,1000,5000,...,100000"></textarea>
+        
+        <div id="error-message" class="text-red-600 font-medium mt-2 hidden"></div>
+
+        <button id="submit-btn" onclick="processCSV()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-lg">
+            Generate Dashboard
+        </button>
+    </section>
+
+    <!-- Dashboard Output Section (Initially hidden) -->
+    <section id="dashboard" class="hidden">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Key Metrics Summary -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="card bg-white p-5">
+                    <p class="text-sm font-medium text-gray-500">Start Date</p>
+                    <p id="metric-start-date" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+                </div>
+                <div class="card bg-white p-5">
+                    <p class="text-sm font-medium text-gray-500">Current Value</p>
+                    <p id="metric-current-value" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+                </div>
+                <div class="card bg-white p-5">
+                    <p class="text-sm font-medium text-gray-500">Total Growth</p>
+                    <p id="metric-total-growth" class="text-2xl font-bold text-green-600 mt-1">--</p>
+                </div>
+                <div class="card bg-white p-5">
+                    <p class="text-sm font-medium text-gray-500">Latest Monthly Gain</p>
+                    <p id="metric-monthly-gain" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Chart 1: Asset Allocation (2/3 width on desktop) -->
+                <div class="lg:col-span-2 card bg-white p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Portfolio Value Over Time</h2>
+                    <div class="h-80">
+                        <canvas id="totalValueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Monthly Gains (1/3 width on desktop) -->
+                <div class="lg:col-span-1 card bg-white p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Current Asset Allocation</h2>
+                    <div class="h-80">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Chart 3: Monthly Gains (Full width) -->
+            <div class="mt-6 card bg-white p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Monthly Gains Trend</h2>
+                <div class="h-80">
+                    <canvas id="monthlyGainsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Detailed Insights -->
+            <div class="mt-8 card bg-white p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Detailed Performance Insights</h2>
+                <ul id="insights-list" class="list-disc list-inside space-y-2 text-gray-700">
+                    <!-- Insights will be injected here -->
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Global Chart instances to prevent memory leaks and redraw issues
+        let totalValueChart;
+        let allocationChart;
+        let monthlyGainsChart;
+
+        // Constants for currency formatting
+        const formatter = new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+
+        // Function to parse the raw CSV text
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) {
+                throw new Error("CSV must contain a header row and at least one data row.");
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length !== headers.length) {
+                    // Skip lines that don't match header count, useful for incomplete final row
+                    continue;
+                }
+
+                let row = {};
+                headers.forEach((header, index) => {
+                    // Convert numeric columns to numbers, treating empty strings as 0
+                    const value = values[index];
+                    if (header !== 'Date' && header !== 'Increase_Percent') {
+                        row[header] = parseFloat(value) || 0;
+                    } else if (header === 'Increase_Percent') {
+                        row[header] = parseFloat(value) || 0;
+                    } else {
+                        row[header] = value;
+                    }
+                });
+                // Only include rows where Total is not 0 (to filter out incomplete rows like the last one in the sample)
+                if (row.Total > 0) {
+                    data.push(row);
+                }
+            }
+
+            if (data.length === 0) {
+                throw new Error("No valid data rows found after parsing.");
+            }
+
+            return data;
+        }
+
+        // Function to process data and calculate metrics
+        function calculateMetrics(data) {
+            const firstEntry = data[0];
+            const lastEntry = data[data.length - 1];
+
+            const initialValue = firstEntry.Total;
+            const finalValue = lastEntry.Total;
+            const totalGrowth = finalValue - initialValue;
+
+            const monthlyGain = lastEntry.Monthly_Gains || 0;
+
+            // Grouping assets for allocation
+            const allocation = {
+                'Cash & Savings': (lastEntry.Savings_B1 || 0) + (lastEntry.Savings_B2 || 0),
+                'Fixed Income (FD, PPF, EPF)': (lastEntry.FD_B1 || 0) + (lastEntry.FD_B2 || 0) + (lastEntry.PPF || 0) + (lastEntry.EPF || 0),
+                'Equities, ETF & MF': (lastEntry.Stocks || 0) + (lastEntry.Stocks2_ETF_MF || 0),
+                'Crypto': (lastEntry.Crypto_Vauld || 0)
+            };
+
+            // Remove zero-value categories for a cleaner chart
+            for (const key in allocation) {
+                if (allocation[key] === 0) {
+                    delete allocation[key];
+                }
+            }
+
+            return {
+                startDate: firstEntry.Date,
+                currentValue: finalValue,
+                initialValue: initialValue,
+                totalGrowth: totalGrowth,
+                monthlyGain: monthlyGain,
+                allocation: allocation
+            };
+        }
+
+        // Function to update the Key Metrics in the HTML
+        function updateMetrics(metrics) {
+            const growthClass = metrics.totalGrowth >= 0 ? 'text-green-600' : 'text-red-600';
+            const monthlyGainClass = metrics.monthlyGain >= 0 ? 'text-green-600' : 'text-red-600';
+
+            document.getElementById('metric-start-date').textContent = metrics.startDate;
+            document.getElementById('metric-current-value').textContent = formatter.format(metrics.currentValue);
+            document.getElementById('metric-total-growth').innerHTML = `${formatter.format(metrics.totalGrowth)} <span class="text-base">(${((metrics.totalGrowth / metrics.initialValue) * 100).toFixed(1)}%)</span>`;
+            document.getElementById('metric-total-growth').className = `text-2xl font-bold mt-1 ${growthClass}`;
+            document.getElementById('metric-monthly-gain').textContent = formatter.format(metrics.monthlyGain);
+            document.getElementById('metric-monthly-gain').className = `text-2xl font-bold mt-1 ${monthlyGainClass}`;
+
+            const insightsList = document.getElementById('insights-list');
+            insightsList.innerHTML = '';
+
+            insightsList.innerHTML += `<li>Your portfolio started on <span class="font-semibold">${metrics.startDate}</span> with a value of <span class="font-semibold">${formatter.format(metrics.initialValue)}</span>.</li>`;
+            insightsList.innerHTML += `<li>The total lifetime growth is <span class="font-semibold ${growthClass}">${formatter.format(metrics.totalGrowth)}</span>, representing a total return of <span class="font-semibold ${growthClass}">${((metrics.totalGrowth / metrics.initialValue) * 100).toFixed(1)}%</span>.</li>`;
+            
+            const allocationEntries = Object.entries(metrics.allocation).sort(([,a], [,b]) => b - a);
+            const topAsset = allocationEntries[0];
+            if (topAsset) {
+                insightsList.innerHTML += `<li>Your largest allocation is in <span class="font-semibold">${topAsset[0]}</span>, currently valued at <span class="font-semibold">${formatter.format(topAsset[1])}</span>.</li>`;
+            }
+
+            insightsList.innerHTML += `<li>The most recent month showed a gain of <span class="font-semibold ${monthlyGainClass}">${formatter.format(metrics.monthlyGain)}</span>.</li>`;
+        }
+
+        // Function to destroy existing chart instances
+        function destroyCharts() {
+            if (totalValueChart) totalValueChart.destroy();
+            if (allocationChart) allocationChart.destroy();
+            if (monthlyGainsChart) monthlyGainsChart.destroy();
+        }
+
+        // Function to render the Portfolio Value Over Time chart
+        function renderTotalValueChart(data) {
+            const ctx = document.getElementById('totalValueChart').getContext('2d');
+            const labels = data.map(row => row.Date);
+            const values = data.map(row => row.Total);
+            
+            totalValueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Portfolio Value',
+                        data: values,
+                        borderColor: 'rgb(79, 70, 229)', // Indigo-600
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'rgb(79, 70, 229)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Value (INR)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatter.format(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatter.format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to render the Asset Allocation chart
+        function renderAllocationChart(metrics) {
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            const labels = Object.keys(metrics.allocation);
+            const values = Object.values(metrics.allocation);
+            const totalValue = metrics.currentValue;
+
+            const backgroundColors = [
+                '#4F46E5', // Indigo
+                '#10B981', // Emerald
+                '#F59E0B', // Amber
+                '#EF4444', // Red
+                '#3B82F6', // Blue
+                '#8B5CF6' // Violet
+            ];
+
+            allocationChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: backgroundColors,
+                        hoverOffset: 12,
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15
+                            }
+                        },
+                        title: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const percentage = ((value / totalValue) * 100).toFixed(1) + '%';
+                                    return `${context.label}: ${formatter.format(value)} (${percentage})`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            formatter: (value) => {
+                                return ((value / totalValue) * 100).toFixed(0) + '%';
+                            },
+                            color: '#fff',
+                            font: { weight: 'bold', size: 14 }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // Function to render the Monthly Gains chart
+        function renderMonthlyGainsChart(data) {
+            const ctx = document.getElementById('monthlyGainsChart').getContext('2d');
+            const labels = data.map(row => row.Date);
+            const monthlyGains = data.map(row => row.Monthly_Gains);
+
+            monthlyGainsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monthly Gain/Loss',
+                        data: monthlyGains,
+                        backgroundColor: (context) => {
+                            const value = context.raw;
+                            return value >= 0 ? '#10B981' : '#EF4444'; // Emerald/Red
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Gains (INR)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatter.format(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatter.format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Main function to process the CSV data and generate the dashboard
+        function processCSV() {
+            const csvText = document.getElementById('csv-data').value;
+            const errorElement = document.getElementById('error-message');
+            const dashboardElement = document.getElementById('dashboard');
+
+            errorElement.classList.add('hidden');
+            dashboardElement.classList.add('hidden');
+
+            if (!csvText) {
+                errorElement.textContent = "Please paste your CSV data into the field.";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // 1. Parse Data
+                const parsedData = parseCSV(csvText);
+
+                // 2. Calculate Metrics
+                const metrics = calculateMetrics(parsedData);
+
+                // 3. Clear existing charts
+                destroyCharts();
+
+                // 4. Update UI Metrics
+                updateMetrics(metrics);
+
+                // 5. Render Charts
+                renderTotalValueChart(parsedData);
+                renderAllocationChart(metrics);
+                renderMonthlyGainsChart(parsedData);
+
+                // 6. Display Dashboard
+                dashboardElement.classList.remove('hidden');
+
+            } catch (e) {
+                console.error("Dashboard Generation Error:", e);
+                errorElement.textContent = `Error processing data: ${e.message}. Please check your CSV format.`;
+                errorElement.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
