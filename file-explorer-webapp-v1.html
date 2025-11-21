@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Media Explorer</title>
+    <style>
+        /* SWISS INTERNATIONAL STYLE - DARK THEME */
+        :root {
+            --bg-main: #050505;
+            --bg-card: #111111;
+            --text-primary: #FFFFFF;
+            --text-secondary: #999999;
+            --accent: #FF3B30; /* Swiss Red */
+            --border: #333333;
+            --font-stack: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            --header-height: 70px;
+            --toolbar-height: 60px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        
+        body {
+            font-family: var(--font-stack);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        /* --- SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: #333; border: 2px solid var(--bg-main); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        /* --- LANDING SCREEN --- */
+        #landing-screen {
+            position: fixed; inset: 0;
+            background: var(--bg-main);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 100;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .upload-wrapper { text-align: center; position: relative; }
+        .btn-hero {
+            border: 1px solid #333;
+            color: var(--text-primary);
+            background: transparent;
+            padding: 60px 100px;
+            font-size: 2rem; font-weight: 700;
+            cursor: pointer; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .btn-hero:hover {
+            background: var(--text-primary);
+            color: var(--bg-main);
+            border-color: var(--text-primary);
+        }
+        .btn-hero svg { width: 64px; height: 64px; fill: currentColor; }
+        #folder-input {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+        }
+
+        /* --- HEADER --- */
+        header {
+            height: var(--header-height);
+            background: rgba(5, 5, 5, 0.9);
+            border-bottom: 1px solid #222;
+            display: flex; align-items: center;
+            padding: 0 30px; gap: 20px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        .app-brand {
+            font-weight: 900; font-size: 1.2rem;
+            letter-spacing: -0.05em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-right: 20px;
+        }
+        .path-bar {
+            flex: 1; background: #111;
+            padding: 8px 12px;
+            font-size: 0.9rem; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 5px;
+            overflow: hidden;
+            border: 1px solid #222;
+            transition: border-color 0.2s;
+        }
+        .path-bar:hover { border-color: #444; color: var(--text-primary); }
+        .crumb { cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .crumb:hover { color: var(--text-primary); text-decoration: underline; }
+        .crumb.active { color: var(--text-primary); font-weight: 600; cursor: default; pointer-events: none; text-decoration: none; }
+        .crumb-sep { color: #444; font-size: 0.8rem; margin: 0 4px; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: var(--toolbar-height);
+            display: flex; align-items: center;
+            padding: 0 30px; gap: 20px;
+            background: var(--bg-main);
+            border-bottom: 1px solid #222;
+        }
+        .tool-group { display: flex; align-items: center; gap: 10px; }
+        .tool-divider { width: 1px; height: 24px; background: #222; margin: 0 10px; }
+        
+        .btn-icon {
+            background: transparent; border: none; color: #666; cursor: pointer;
+            padding: 8px; transition: 0.2s; display: flex;
+        }
+        .btn-icon:hover, .btn-icon.active { color: var(--text-primary); transform: scale(1.1); }
+        .btn-icon svg { width: 20px; height: 20px; fill: currentColor; }
+
+        .search-wrap { margin-left: auto; position: relative; }
+        .search-input {
+            background: transparent; border: none;
+            border-bottom: 1px solid #333;
+            color: var(--text-primary);
+            padding: 8px 0; width: 200px;
+            font-family: var(--font-stack); font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        .search-input:focus { outline: none; border-bottom-color: var(--accent); width: 250px; }
+        
+        .sort-select {
+            background: transparent; border: none; color: var(--text-secondary);
+            font-family: var(--font-stack); font-size: 0.85rem; cursor: pointer;
+            text-transform: uppercase; font-weight: 700;
+        }
+        .sort-select:focus { outline: none; color: var(--text-primary); }
+
+        /* --- MAIN VIEW STRUCTURE --- */
+        #scroll-container {
+            flex: 1;
+            overflow-y: auto; /* Vertical scrollbar lives here */
+            overflow-x: hidden;
+        }
+
+        #main-view {
+            padding: 30px;
+            padding-bottom: 100px;
+            /* CSS Columns for pure masonry */
+            column-count: 5;
+            column-gap: 20px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+            /* Height auto is implied here, allowing vertical flow */
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Responsive Columns targeting the inner container */
+        @media (max-width: 1600px) { #main-view { column-count: 4; } }
+        @media (max-width: 1200px) { #main-view { column-count: 3; } }
+        @media (max-width: 800px)  { #main-view { column-count: 2; } }
+        @media (max-width: 500px)  { #main-view { column-count: 1; } }
+
+        /* List Mode Override */
+        #main-view.list-mode {
+            column-count: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* --- CARDS --- */
+        .card {
+            background: var(--bg-card);
+            margin-bottom: 20px;
+            break-inside: avoid; /* Critical for masonry */
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: block;
+            overflow: hidden;
+            /* Fix for Chrome rendering glitch in columns */
+            backface-visibility: hidden; 
+        }
+        .card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            z-index: 2;
+        }
+
+        /* Folder */
+        .card.folder {
+            padding: 20px;
+            background: #151515;
+            border-left: 2px solid transparent;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .card.folder:hover { border-left-color: var(--accent); background: #1a1a1a; }
+        .folder-icon { width: 24px; height: 24px; fill: #444; transition: 0.2s; }
+        .card.folder:hover .folder-icon { fill: var(--text-primary); }
+        .folder-name { font-weight: 500; color: #ccc; font-size: 0.95rem; }
+
+        /* File */
+        .media-wrapper {
+            width: 100%;
+            background: #080808;
+            position: relative;
+        }
+        .media-thumb {
+            width: 100%; height: auto; display: block;
+            transition: filter 0.3s;
+        }
+        .card:hover .media-thumb { filter: contrast(1.1); }
+
+        .info-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            padding: 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+            opacity: 0; transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+        .card:hover .info-overlay { opacity: 1; transform: translateY(0); }
+        
+        .file-name {
+            font-size: 0.8rem; font-weight: 600; color: #fff;
+            margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .file-meta {
+            font-size: 0.65rem; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em;
+            display: flex; justify-content: space-between;
+        }
+
+        .video-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.6); padding: 4px 8px;
+            font-size: 0.6rem; font-weight: bold; color: #fff;
+            backdrop-filter: blur(4px); text-transform: uppercase;
+        }
+        .mute-btn {
+            position: absolute; top: 10px; left: 10px;
+            background: var(--accent); border: none; color: white;
+            width: 24px; height: 24px; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 10;
+        }
+        .mute-btn svg { width: 12px; height: 12px; fill: currentColor; }
+        .card:hover .mute-btn { display: flex; animation: popIn 0.2s; }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* List View Overrides */
+        #main-view.list-mode .card {
+            display: flex; flex-direction: row; align-items: center;
+            height: 50px; padding: 0 20px; margin-bottom: 1px;
+            background: #0f0f0f;
+        }
+        #main-view.list-mode .media-wrapper { width: 40px; height: 40px; margin-right: 20px; background: none; }
+        #main-view.list-mode .media-thumb { width: 100%; height: 100%; object-fit: cover; }
+        #main-view.list-mode .info-overlay { 
+            position: static; opacity: 1; transform: none; background: none; padding: 0; flex: 1;
+        }
+        #main-view.list-mode .file-meta { margin-top: 0; width: 200px; text-align: right; }
+
+        /* --- FULLSCREEN LIGHTBOX --- */
+        #lightbox {
+            position: fixed; inset: 0;
+            background: #000; z-index: 1000;
+            display: none; opacity: 0; transition: opacity 0.3s;
+        }
+        #lightbox.active { display: flex; opacity: 1; }
+        
+        .lb-media-container {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        #lb-img, #lb-video { max-width: 100%; max-height: 100vh; object-fit: contain; }
+
+        .lb-ui-layer {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 30px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.8) 100%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #lightbox:hover .lb-ui-layer { opacity: 1; }
+        .lb-ui-layer * { pointer-events: auto; }
+
+        .lb-header { display: flex; justify-content: space-between; align-items: center; color: #fff; }
+        .lb-counter { font-family: var(--font-stack); font-weight: 300; letter-spacing: 1px; font-size: 0.9rem; }
+        
+        .lb-actions { display: flex; gap: 15px; }
+        .lb-btn {
+            background: rgba(255,255,255,0.1); border: none; color: #fff;
+            width: 44px; height: 44px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; backdrop-filter: blur(5px);
+        }
+        .lb-btn:hover { background: var(--accent); }
+        .lb-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+        .lb-nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: transparent; border: none; color: rgba(255,255,255,0.5);
+            cursor: pointer; padding: 20px; transition: 0.2s;
+        }
+        .lb-nav-btn:hover { color: #fff; transform: translateY(-50%) scale(1.2); }
+        .lb-nav-btn.prev { left: 20px; }
+        .lb-nav-btn.next { right: 20px; }
+        .lb-nav-btn svg { width: 40px; height: 40px; fill: currentColor; }
+
+        .lb-footer { text-align: center; }
+        .lb-title { font-size: 1rem; font-weight: 500; color: #fff; margin-bottom: 5px; }
+        .lb-details { font-size: 0.8rem; color: #aaa; font-family: monospace; }
+
+        /* Audio Viz */
+        .audio-viz { display: flex; align-items: center; justify-content: center; height: 150px; gap: 4px; }
+        .viz-bar { width: 6px; background: var(--accent); animation: eq 1s infinite ease-in-out; }
+        @keyframes eq { 0%, 100% { height: 20px; } 50% { height: 100px; } }
+    </style>
+</head>
+<body>
+
+    <!-- LANDING -->
+    <div id="landing-screen">
+        <div class="upload-wrapper">
+            <div class="btn-hero">
+                <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                <span>Select Folder</span>
+                <div style="font-size: 0.9rem; font-weight: 400; opacity: 0.6; text-transform: none; letter-spacing: normal;">Works Offline • Local Execution</div>
+            </div>
+            <input type="file" id="folder-input" webkitdirectory directory multiple>
+        </div>
+    </div>
+
+    <!-- APP HEADER -->
+    <header>
+        <div class="app-brand">GALLERY</div>
+        <div class="path-bar" id="breadcrumbs"></div>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar">
+        <div class="tool-group">
+            <button class="btn-icon" id="btn-up" title="Go Up">
+                <svg viewBox="0 0 24 24"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
+            </button>
+        </div>
+        
+        <div class="tool-divider"></div>
+
+        <div class="tool-group">
+            <button class="btn-icon active" id="view-grid" title="Grid">
+                <svg viewBox="0 0 24 24"><path d="M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z"/></svg>
+            </button>
+            <button class="btn-icon" id="view-list" title="List">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+            </button>
+        </div>
+
+        <div class="tool-group" style="margin-left: 20px;">
+            <span style="color: #666; font-size: 0.8rem; font-weight: 700;">SORT BY</span>
+            <select id="sort-select" class="sort-select">
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                <option value="size">Size</option>
+                <option value="type">Type</option>
+            </select>
+        </div>
+
+        <div class="search-wrap">
+            <input type="text" id="search-input" class="search-input" placeholder="Filter files...">
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT (Separated wrapper for vertical scroll + masonry) -->
+    <div id="scroll-container">
+        <div id="main-view"></div>
+    </div>
+
+    <!-- LIGHTBOX VIEWER -->
+    <div id="lightbox">
+        <div class="lb-media-container" id="lb-container"></div>
+        <div class="lb-ui-layer">
+            <div class="lb-header">
+                <div class="lb-counter" id="lb-counter">1 / 100</div>
+                <div class="lb-actions">
+                    <button class="lb-btn" id="lb-play" title="Toggle Slideshow"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+                    <button class="lb-btn" id="lb-fs" title="Fullscreen"><svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+                    <button class="lb-btn" id="lb-close" title="Close (ESC)"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+                </div>
+            </div>
+            <button class="lb-nav-btn prev" id="lb-prev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+            <button class="lb-nav-btn next" id="lb-next"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+            <div class="lb-footer">
+                <div class="lb-title" id="lb-title">Filename</div>
+                <div class="lb-details" id="lb-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            root: null, currentDir: null, path: [], files: [],
+            viewMode: 'grid', sortBy: 'name', filter: '',
+            lightbox: { active: false, list: [], index: 0, slideshow: false, timer: null, duration: 3000 }
+        };
+
+        const config = {
+            imageExt: ['jpg','jpeg','png','gif','webp','svg','bmp'],
+            videoExt: ['mp4','webm','ogg','mov','m4v'],
+            audioExt: ['mp3','wav','ogg','m4a','flac']
+        };
+
+        const $ = (id) => document.getElementById(id);
+        const els = {
+            landing: $('landing-screen'),
+            input: $('folder-input'),
+            breadcrumbs: $('breadcrumbs'),
+            main: $('main-view'),
+            scroll: $('scroll-container'),
+            search: $('search-input'),
+            sort: $('sort-select'),
+            lb: {
+                root: $('lightbox'), container: $('lb-container'),
+                title: $('lb-title'), details: $('lb-details'),
+                counter: $('lb-counter'), playBtn: $('lb-play')
+            }
+        };
+
+        els.input.addEventListener('change', async (e) => {
+            if (e.target.files.length) {
+                await buildFileSystem(e.target.files);
+                els.landing.style.transform = 'translateY(-100%)';
+            }
+        });
+
+        async function buildFileSystem(fileList) {
+            const root = { name: 'Root', type: 'dir', children: {}, parent: null };
+            Array.from(fileList).forEach(file => {
+                if (file.name.startsWith('.')) return;
+                const parts = file.webkitRelativePath.split('/');
+                let current = root;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    const part = parts[i];
+                    if (!current.children[part]) {
+                        current.children[part] = { name: part, type: 'dir', children: {}, parent: current };
+                    }
+                    current = current.children[part];
+                }
+                const fname = parts[parts.length - 1];
+                const ext = fname.split('.').pop().toLowerCase();
+                let type = 'unknown';
+                if (config.imageExt.includes(ext)) type = 'image';
+                else if (config.videoExt.includes(ext)) type = 'video';
+                else if (config.audioExt.includes(ext)) type = 'audio';
+                current.children[fname] = { name: fname, type: type, file: file, size: file.size, date: file.lastModified, parent: current };
+            });
+            const realRootName = Object.keys(root.children)[0];
+            state.root = root.children[realRootName];
+            openDir(state.root);
+        }
+
+        function openDir(dir) {
+            state.currentDir = dir;
+            state.path = [];
+            let curr = dir;
+            while(curr && curr.parent) { state.path.unshift(curr); curr = curr.parent; }
+            renderBreadcrumbs();
+            renderView();
+            els.scroll.scrollTop = 0; // Reset scroll
+        }
+
+        function goUp() {
+            if (state.currentDir && state.currentDir.parent && state.currentDir.parent.parent) {
+                openDir(state.currentDir.parent);
+            }
+        }
+
+        function renderBreadcrumbs() {
+            els.breadcrumbs.innerHTML = '';
+            state.path.forEach((dir, i) => {
+                const span = document.createElement('span');
+                span.className = `crumb ${i === state.path.length -1 ? 'active' : ''}`;
+                span.textContent = dir.name;
+                span.onclick = () => openDir(dir);
+                if (i > 0) {
+                    const sep = document.createElement('span'); sep.className = 'crumb-sep'; sep.innerHTML = '/';
+                    els.breadcrumbs.appendChild(sep);
+                }
+                els.breadcrumbs.appendChild(span);
+            });
+        }
+
+        function renderView() {
+            els.main.innerHTML = '';
+            els.main.className = state.viewMode === 'list' ? 'list-mode' : '';
+            let items = Object.values(state.currentDir.children);
+            if (state.filter) { items = items.filter(i => i.name.toLowerCase().includes(state.filter.toLowerCase())); }
+            items.sort((a, b) => {
+                if (a.type === 'dir' && b.type !== 'dir') return -1;
+                if (a.type !== 'dir' && b.type === 'dir') return 1;
+                const valA = state.sortBy === 'size' ? (a.size||0) : state.sortBy === 'date' ? (a.date||0) : state.sortBy === 'type' ? (a.type||'') : a.name.toLowerCase();
+                const valB = state.sortBy === 'size' ? (b.size||0) : state.sortBy === 'date' ? (b.date||0) : state.sortBy === 'type' ? (b.type||'') : b.name.toLowerCase();
+                return valA < valB ? -1 : valA > valB ? 1 : 0;
+            });
+            state.files = items.filter(i => i.type !== 'dir');
+            
+            const observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(e => { if (e.isIntersecting) { loadAsset(e.target); obs.unobserve(e.target); } });
+            }, { rootMargin: '200px', root: els.scroll }); // Attach root to scroll container
+
+            const frag = document.createDocumentFragment();
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = item.type === 'dir' ? 'card folder' : 'card file';
+                if (item.type === 'dir') {
+                    card.innerHTML = `<svg class="folder-icon" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg><div class="folder-name">${item.name}</div>`;
+                    card.onclick = () => openDir(item);
+                } else {
+                    const size = formatSize(item.size);
+                    const date = new Date(item.date).toLocaleDateString();
+                    let mediaHtml = item.type === 'audio' 
+                        ? `<div class="audio-viz"><div class="viz-bar"></div><div class="viz-bar" style="animation-delay:0.1s"></div><div class="viz-bar" style="animation-delay:0.2s"></div></div>` 
+                        : `<img class="media-thumb" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="">`;
+                    let badge = item.type === 'video' ? '<div class="video-badge">VIDEO</div>' : '';
+                    let muteBtn = item.type === 'video' ? `<button class="mute-btn" title="Toggle Sound" onclick="toggleMute(event, this)"><svg viewBox="0 0 24 24"><path d="M7 9v6h4l5 5V4l-5 5H7z"/></svg></button>` : '';
+                    card.innerHTML = `<div class="media-wrapper">${mediaHtml}${badge}${muteBtn}</div><div class="info-overlay"><div class="file-name">${item.name}</div><div class="file-meta"><span>${date}</span><span>${size}</span></div></div>`;
+                    card.dataset.type = item.type; card.itemRef = item;
+                    card.onclick = (e) => { if(e.target.closest('.mute-btn')) return; openLightbox(item); };
+                    if (item.type === 'video') { card.onmouseenter = () => playPreview(card); card.onmouseleave = () => stopPreview(card); }
+                    observer.observe(card);
+                }
+                frag.appendChild(card);
+            });
+            els.main.appendChild(frag);
+        }
+
+        function loadAsset(card) {
+            const item = card.itemRef; if (!item) return;
+            const img = card.querySelector('.media-thumb');
+            if (item.type === 'image') { img.src = URL.createObjectURL(item.file); } 
+            else if (item.type === 'video') {
+                const video = document.createElement('video');
+                video.className = 'media-thumb'; video.src = URL.createObjectURL(item.file);
+                video.muted = true; video.loop = true; video.preload = 'metadata';
+                if(img) img.replaceWith(video);
+            }
+        }
+
+        function playPreview(card) { const vid = card.querySelector('video'); if (vid) vid.play().catch(()=>{}); }
+        function stopPreview(card) { const vid = card.querySelector('video'); if (vid) { vid.pause(); vid.currentTime = 0; } }
+        window.toggleMute = (e, btn) => {
+            e.stopPropagation(); const card = btn.closest('.card'); const vid = card.querySelector('video');
+            if (vid) { vid.muted = !vid.muted; btn.innerHTML = vid.muted ? '<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'; }
+        };
+        function formatSize(bytes) { if(bytes===0) return '0 B'; const k=1024, sizes=['B','KB','MB','GB']; const i=Math.floor(Math.log(bytes)/Math.log(k)); return parseFloat((bytes/Math.pow(k,i)).toFixed(1)) + ' ' + sizes[i]; }
+
+        $('btn-up').onclick = goUp;
+        $('view-grid').onclick = function() { this.classList.add('active'); $('view-list').classList.remove('active'); state.viewMode = 'grid'; renderView(); };
+        $('view-list').onclick = function() { this.classList.add('active'); $('view-grid').classList.remove('active'); state.viewMode = 'list'; renderView(); };
+        els.search.oninput = (e) => { state.filter = e.target.value; renderView(); };
+        els.sort.onchange = (e) => { state.sortBy = e.target.value; renderView(); };
+
+        function openLightbox(item) { state.lightbox.active = true; state.lightbox.index = state.files.indexOf(item); els.lb.root.classList.add('active'); loadLightboxItem(); document.addEventListener('keydown', lbKeyHandler); }
+        function closeLightbox() { stopSlideshow(); state.lightbox.active = false; els.lb.root.classList.remove('active'); els.lb.container.innerHTML = ''; document.removeEventListener('keydown', lbKeyHandler); }
+        function loadLightboxItem() {
+            const item = state.files[state.lightbox.index]; if (!item) return;
+            els.lb.container.innerHTML = ''; els.lb.title.textContent = item.name;
+            els.lb.details.textContent = `${new Date(item.date).toLocaleDateString()} • ${formatSize(item.size)}`;
+            els.lb.counter.textContent = `${state.lightbox.index + 1} / ${state.files.length}`;
+            const url = URL.createObjectURL(item.file);
+            let node;
+            if (item.type === 'image') { node = document.createElement('img'); node.id = 'lb-img'; node.src = url; } 
+            else { node = document.createElement(item.type === 'video' ? 'video' : 'audio'); node.id = 'lb-video'; node.src = url; node.controls = true; node.autoplay = state.lightbox.slideshow || true; node.onended = () => { if (state.lightbox.slideshow) nextSlide(); }; }
+            els.lb.container.appendChild(node);
+            if(state.lightbox.slideshow && item.type === 'image') { clearTimeout(state.lightbox.timer); state.lightbox.timer = setTimeout(nextSlide, state.lightbox.duration); }
+        }
+        function nextSlide() { state.lightbox.index = (state.lightbox.index + 1) % state.files.length; loadLightboxItem(); }
+        function prevSlide() { state.lightbox.index = (state.lightbox.index - 1 + state.files.length) % state.files.length; loadLightboxItem(); }
+        function toggleSlideshow() { state.lightbox.slideshow = !state.lightbox.slideshow; els.lb.playBtn.style.color = state.lightbox.slideshow ? 'var(--accent)' : '#fff'; if (state.lightbox.slideshow) { const vid = $('lb-video'); if(vid) vid.play(); else nextSlide(); } else { clearTimeout(state.lightbox.timer); const vid = $('lb-video'); if(vid) vid.pause(); } }
+        function stopSlideshow() { state.lightbox.slideshow = false; clearTimeout(state.lightbox.timer); els.lb.playBtn.style.color = '#fff'; }
+        function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else if (document.exitFullscreen) document.exitFullscreen(); }
+        function lbKeyHandler(e) { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowRight') nextSlide(); if (e.key === 'ArrowLeft') prevSlide(); if (e.key === ' ') { e.preventDefault(); const vid = $('lb-video'); if(vid) vid.paused ? vid.play() : vid.pause(); else toggleSlideshow(); } }
+
+        $('lb-close').onclick = closeLightbox; $('lb-next').onclick = () => { stopSlideshow(); nextSlide(); };
+        $('lb-prev').onclick = () => { stopSlideshow(); prevSlide(); }; $('lb-play').onclick = toggleSlideshow; $('lb-fs').onclick = toggleFS;
+    </script>
+</body>
+</html>
+
+
