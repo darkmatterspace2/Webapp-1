@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Media Gallery</title>
+    <style>
+        :root {
+            --bg-color: #111111;
+            --card-bg: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --grid-gap: 20px; /* Negative space */
+            --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* --- Typography --- */
+        h1, h2, h3 { font-weight: 300; letter-spacing: -0.5px; }
+        .muted { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* --- Landing Screen --- */
+        #landing {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background: var(--bg-color);
+            transition: opacity 0.5s ease;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-top: 2rem;
+            border: 1px solid var(--text-muted);
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .upload-btn-wrapper:hover {
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .btn {
+            padding: 15px 40px;
+            color: var(--text-main);
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Main Gallery View --- */
+        #gallery-view {
+            display: none;
+            padding: 40px;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            position: sticky;
+            top: 0;
+            background: var(--bg-color);
+            z-index: 5;
+            padding: 20px 0;
+            border-bottom: 1px solid #222;
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: var(--text-main);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: var(--transition);
+        }
+
+        .tool-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .tool-btn.active {
+            background: var(--text-main);
+            color: var(--bg-color);
+        }
+
+        /* Swiss Grid Layout */
+        #grid {
+            display: grid;
+            /* Responsive columns */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            grid-auto-flow: dense; /* Key for packing different sizes */
+            gap: var(--grid-gap);
+        }
+
+        .media-item {
+            position: relative;
+            background: var(--card-bg);
+            overflow: hidden;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.6s forwards;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* Default aspect ratio fallback */
+            min-height: 200px; 
+        }
+
+        .media-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+
+        /* Content fitting */
+        .media-item img, .media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+
+        /* Sizing Classes (Applied by JS based on aspect ratio) */
+        .media-item.wide {
+            grid-column: span 2;
+        }
+
+        .media-item.tall {
+            grid-row: span 2;
+        }
+
+        .media-item.big {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        /* Video indicator */
+        .video-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #gallery-view { padding: 20px; }
+            #grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .media-item.wide, .media-item.tall, .media-item.big { grid-column: span 1; grid-row: span 1; }
+        }
+
+        @media (max-width: 480px) {
+            #grid { grid-template-columns: 1fr; }
+        }
+
+        /* --- Lightbox / Viewer --- */
+        #lightbox {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #lightbox.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #lb-content {
+            max-width: 95%;
+            max-height: 90vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            transition: transform 0.3s ease;
+        }
+
+        #lb-media-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #lb-image, #lb-video {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        /* Lightbox Controls */
+        .lb-control {
+            position: absolute;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 20px;
+            transition: color 0.2s;
+            z-index: 101;
+        }
+
+        .lb-control:hover { color: #aaa; }
+        .lb-close { top: 20px; right: 20px; font-size: 3rem; line-height: 0.5; }
+        .lb-prev { left: 20px; top: 50%; transform: translateY(-50%); }
+        .lb-next { right: 20px; top: 50%; transform: translateY(-50%); }
+        .lb-info {
+            position: absolute;
+            bottom: 20px;
+            left: 30px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        /* Slideshow Progress Bar */
+        #ss-progress {
+            position: absolute;
+            top: 0; left: 0; height: 3px;
+            background: var(--accent);
+            width: 0%;
+            z-index: 102;
+            transition: width 0.1s linear;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            position: absolute;
+            display: none;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- LANDING SCREEN -->
+    <div id="landing">
+        <h1 style="margin-bottom: 10px;">Gallery</h1>
+        <p class="muted">Select a folder to create a local gallery</p>
+        
+        <div class="upload-btn-wrapper">
+            <button class="btn">Browse Folder</button>
+            <!-- webkitdirectory allows folder selection -->
+            <input type="file" id="folderInput" webkitdirectory directory multiple>
+        </div>
+        <p id="loading-text" class="muted" style="margin-top: 20px; opacity: 0;">Parsing files...</p>
+    </div>
+
+    <!-- GALLERY VIEW -->
+    <div id="gallery-view">
+        <div id="toolbar">
+            <div>
+                <h2 id="gallery-title">Local Library</h2>
+                <span id="file-count" class="muted">0 items</span>
+            </div>
+            <div>
+                <button class="tool-btn" id="slideshow-btn" onclick="toggleSlideshow()">Start Slideshow</button>
+                <button class="tool-btn" onclick="resetGallery()" style="margin-left: 10px;">Close</button>
+            </div>
+        </div>
+
+        <div id="grid">
+            <!-- Items injected here -->
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox">
+        <div id="ss-progress"></div>
+        <div class="spinner" id="lb-spinner"></div>
+        
+        <button class="lb-control lb-close" onclick="closeLightbox()">&times;</button>
+        <button class="lb-control lb-prev" onclick="changeSlide(-1)">&#10094;</button>
+        <button class="lb-control lb-next" onclick="changeSlide(1)">&#10095;</button>
+        
+        <div id="lb-media-container">
+            <img id="lb-image" src="" style="display:none;">
+            <video id="lb-video" controls style="display:none;"></video>
+        </div>
+        
+        <div class="lb-info" id="lb-caption"></div>
+    </div>
+
+    <script>
+        // --- State ---
+        let mediaFiles = [];
+        let currentIndex = 0;
+        let isSlideshowActive = false;
+        let slideshowTimer = null;
+        const supportedImages = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+        const supportedVideos = ['mp4', 'webm', 'mov', 'm4v'];
+
+        // --- DOM Elements ---
+        const folderInput = document.getElementById('folderInput');
+        const landing = document.getElementById('landing');
+        const galleryView = document.getElementById('gallery-view');
+        const grid = document.getElementById('grid');
+        const loadingText = document.getElementById('loading-text');
+        
+        const lightbox = document.getElementById('lightbox');
+        const lbImage = document.getElementById('lb-image');
+        const lbVideo = document.getElementById('lb-video');
+        const lbCaption = document.getElementById('lb-caption');
+        const ssProgress = document.getElementById('ss-progress');
+
+        // --- Event Listeners ---
+        folderInput.addEventListener('change', handleFiles);
+        
+        // Keyboard Nav
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('active')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+            if (e.key === ' ') {
+                e.preventDefault(); // Stop scrolling
+                toggleSlideshow();
+            }
+        });
+
+        // --- File Handling ---
+        async function handleFiles(e) {
+            const files = Array.from(e.target.files);
+            
+            if (files.length === 0) return;
+
+            loadingText.style.opacity = 1;
+            loadingText.innerText = `Found ${files.length} files. Filtering...`;
+
+            // Reset
+            mediaFiles = [];
+            grid.innerHTML = '';
+
+            // Process files (simple sort by name to keep folders somewhat together)
+            files.sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+
+            let batch = [];
+            const BATCH_SIZE = 50; // Render in chunks to prevent UI freeze
+
+            for (const file of files) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const type = supportedImages.includes(ext) ? 'image' : (supportedVideos.includes(ext) ? 'video' : null);
+
+                if (type) {
+                    const url = URL.createObjectURL(file);
+                    const mediaItem = {
+                        file,
+                        url,
+                        type,
+                        name: file.name,
+                        path: file.webkitRelativePath,
+                        index: mediaFiles.length
+                    };
+                    mediaFiles.push(mediaItem);
+                    batch.push(mediaItem);
+                    
+                    if (batch.length >= BATCH_SIZE) {
+                        renderBatch(batch);
+                        batch = [];
+                        // Small delay to let UI breathe
+                        await new Promise(r => setTimeout(r, 10)); 
+                    }
+                }
+            }
+
+            // Render remaining
+            if (batch.length > 0) renderBatch(batch);
+
+            // UI Transition
+            document.getElementById('file-count').innerText = `${mediaFiles.length} items`;
+            landing.style.opacity = 0;
+            setTimeout(() => {
+                landing.style.display = 'none';
+                galleryView.style.display = 'block';
+                setTimeout(() => galleryView.style.opacity = 1, 50);
+            }, 500);
+        }
+
+        function renderBatch(items) {
+            const fragment = document.createDocumentFragment();
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'media-item';
+                div.dataset.index = item.index;
+                div.onclick = () => openLightbox(item.index);
+
+                if (item.type === 'image') {
+                    const img = document.createElement('img');
+                    img.loading = 'lazy'; // Native lazy loading
+                    img.src = item.url;
+                    img.alt = item.name;
+                    
+                    // Aspect Ratio Logic for Grid Layout
+                    img.onload = function() {
+                        const ratio = this.naturalWidth / this.naturalHeight;
+                        // Swiss Grid Logic:
+                        // Wide: > 1.5 ratio -> Span 2 columns
+                        // Tall: < 0.7 ratio -> Span 2 rows
+                        // Big: both dim > 2000px? Just logic.
+                        
+                        if (ratio > 1.6) div.classList.add('wide');
+                        else if (ratio < 0.7) div.classList.add('tall');
+                        
+                        // Force grid reflow gracefully
+                        div.style.opacity = 1;
+                    };
+                    div.appendChild(img);
+
+                } else {
+                    // Video handling
+                    const video = document.createElement('video');
+                    video.src = item.url;
+                    video.muted = true;
+                    video.preload = 'metadata'; // Loads first frame usually
+                    video.loop = true;
+                    
+                    // Hover effects
+                    div.addEventListener('mouseenter', () => video.play().catch(e=>{}));
+                    div.addEventListener('mouseleave', () => {
+                        video.pause();
+                        video.currentTime = 0;
+                    });
+
+                    // Ratio logic for video (trickier, event loadedmetadata)
+                    video.onloadedmetadata = function() {
+                        const ratio = this.videoWidth / this.videoHeight;
+                        if (ratio > 1.6) div.classList.add('wide');
+                        else if (ratio < 0.7) div.classList.add('tall');
+                         div.style.opacity = 1;
+                    };
+                    
+                    const badge = document.createElement('div');
+                    badge.className = 'video-badge';
+                    badge.innerText = 'Video';
+                    
+                    div.appendChild(video);
+                    div.appendChild(badge);
+                }
+
+                fragment.appendChild(div);
+            });
+            grid.appendChild(fragment);
+        }
+
+        function resetGallery() {
+            location.reload(); // Simple reset ensures memory is cleared
+        }
+
+        // --- Lightbox Logic ---
+
+        function openLightbox(index) {
+            currentIndex = index;
+            updateLightboxContent();
+            lightbox.classList.add('active');
+        }
+
+        function closeLightbox() {
+            stopSlideshow();
+            lightbox.classList.remove('active');
+            lbVideo.pause();
+            lbVideo.src = ""; // clear buffer
+        }
+
+        function changeSlide(dir) {
+            let newIndex = currentIndex + dir;
+            if (newIndex < 0) newIndex = mediaFiles.length - 1;
+            if (newIndex >= mediaFiles.length) newIndex = 0;
+            
+            currentIndex = newIndex;
+            updateLightboxContent();
+        }
+
+        function updateLightboxContent() {
+            const item = mediaFiles[currentIndex];
+            
+            // Reset
+            lbImage.style.display = 'none';
+            lbVideo.style.display = 'none';
+            lbVideo.pause();
+            
+            lbCaption.innerText = `${item.name} (${currentIndex + 1} / ${mediaFiles.length})`;
+            document.getElementById('lb-spinner').style.display = 'block';
+
+            if (item.type === 'image') {
+                lbImage.src = item.url;
+                lbImage.style.display = 'block';
+                lbImage.onload = () => document.getElementById('lb-spinner').style.display = 'none';
+                
+                if (isSlideshowActive) resetSlideshowTimer(3000);
+            } else {
+                lbVideo.src = item.url;
+                lbVideo.style.display = 'block';
+                lbVideo.oncanplay = () => document.getElementById('lb-spinner').style.display = 'none';
+                
+                // If slideshow, play and wait for end. If not, user plays manually or autoplay based on preference
+                // In Lightbox, auto-play video usually expected
+                lbVideo.play().catch(e => console.log("Autoplay blocked"));
+                
+                if (isSlideshowActive) {
+                    lbVideo.onended = () => changeSlide(1);
+                    // Clear interval, let the video duration drive the slide
+                    clearInterval(slideshowTimer);
+                } else {
+                    lbVideo.onended = null;
+                }
+            }
+        }
+
+        // --- Slideshow Logic ---
+
+        function toggleSlideshow() {
+            const btn = document.getElementById('slideshow-btn');
+            if (isSlideshowActive) {
+                stopSlideshow();
+                btn.innerText = "Start Slideshow";
+                btn.classList.remove('active');
+            } else {
+                isSlideshowActive = true;
+                btn.innerText = "Stop Slideshow";
+                btn.classList.add('active');
+                
+                if (!lightbox.classList.contains('active')) {
+                    openLightbox(currentIndex);
+                } else {
+                    // If already open, trigger logic for current slide
+                    updateLightboxContent(); 
+                }
+            }
+        }
+
+        function stopSlideshow() {
+            isSlideshowActive = false;
+            clearInterval(slideshowTimer);
+            ssProgress.style.width = '0%';
+            lbVideo.onended = null;
+        }
+
+        function resetSlideshowTimer(duration) {
+            clearInterval(slideshowTimer);
+            
+            // Animation for progress bar
+            ssProgress.style.transition = 'none';
+            ssProgress.style.width = '0%';
+            
+            // Force reflow
+            void ssProgress.offsetWidth; 
+            
+            ssProgress.style.transition = `width ${duration}ms linear`;
+            ssProgress.style.width = '100%';
+
+            slideshowTimer = setInterval(() => {
+                changeSlide(1);
+            }, duration);
+        }
+
+    </script>
+</body>
+</html>
