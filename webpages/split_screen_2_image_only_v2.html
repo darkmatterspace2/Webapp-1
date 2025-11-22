@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Canvas Studio: Media Composer</title>
+<style>
+    /* * CORE CSS VARIABLES & RESET 
+     */
+    :root {
+        --theme-color: #2196F3;
+        --theme-hover: #1976D2;
+        --handle-size: 12px;
+        --handle-color: #fff;
+        --handle-border: #333;
+        --bg-color: #f0f2f5;
+        --toolbar-bg: rgba(255, 255, 255, 0.95);
+        --toolbar-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body, html {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        overflow: hidden; /* Prevent scroll */
+        background-color: var(--bg-color);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        touch-action: none; /* Prevent browser gestures */
+    }
+
+    /* * MAIN STAGE 
+     */
+    #stage {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background-image: radial-gradient(#ccc 1px, transparent 1px);
+        background-size: 20px 20px; /* Grid pattern */
+        perspective: 1000px;
+    }
+
+    /* * MEDIA OBJECTS 
+     */
+    .media-container {
+        position: absolute;
+        touch-action: none;
+        user-select: none;
+        transform-origin: center center;
+        cursor: grab;
+        /* Default size before content loads */
+        width: 300px; 
+        height: 200px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: box-shadow 0.2s;
+    }
+
+    .media-container.selected {
+        outline: 2px solid var(--theme-color);
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3), 0 10px 20px rgba(0,0,0,0.2);
+        z-index: 1000 !important; /* Temporary bring to front */
+    }
+
+    .media-container:active { cursor: grabbing; }
+
+    /* The actual image/video element */
+    .media-content {
+        width: 100%;
+        height: 100%;
+        object-fit: fill; /* Fill the container */
+        pointer-events: none; /* Pass events to container for dragging */
+        display: block;
+    }
+    
+    /* Double click enables pointer events on video for controls */
+    .media-container.interactive .media-content { pointer-events: auto; }
+
+    /* * HANDLES (Resize, Rotate, Close)
+     * Only visible when .selected 
+     */
+    .handle {
+        position: absolute;
+        width: var(--handle-size);
+        height: var(--handle-size);
+        background: var(--handle-color);
+        border: 1px solid var(--handle-border);
+        border-radius: 50%;
+        display: none;
+        z-index: 1002;
+    }
+
+    .media-container.selected .handle { display: block; }
+
+    /* Resize Handles Positions */
+    .h-tl { top: -6px; left: -6px; cursor: nwse-resize; }
+    .h-tm { top: -6px; left: calc(50% - 6px); cursor: ns-resize; }
+    .h-tr { top: -6px; right: -6px; cursor: nesw-resize; }
+    .h-mr { top: calc(50% - 6px); right: -6px; cursor: ew-resize; }
+    .h-br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+    .h-bm { bottom: -6px; left: calc(50% - 6px); cursor: ns-resize; }
+    .h-bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+    .h-ml { top: calc(50% - 6px); left: -6px; cursor: ew-resize; }
+
+    /* Rotation Handle */
+    .h-rot {
+        top: -30px;
+        left: calc(50% - 6px);
+        background: #4CAF50; /* Green like PPT */
+        cursor: grab;
+    }
+    .h-rot-connector {
+        position: absolute;
+        top: -24px;
+        left: 50%;
+        width: 1px;
+        height: 24px;
+        background: var(--theme-color);
+        display: none;
+        transform: translateX(-50%);
+    }
+    .media-container.selected .h-rot-connector { display: block; }
+
+    /* Close/Delete Button */
+    .btn-close {
+        position: absolute;
+        top: -12px;
+        left: -12px;
+        width: 24px;
+        height: 24px;
+        background: red;
+        color: white;
+        border-radius: 50%;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 1003;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .media-container.selected .btn-close { display: flex; }
+
+    /* Info Overlay (Degrees) */
+    .info-overlay {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        display: none;
+    }
+
+    /* * TOOLBAR 
+     */
+    #toolbar {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--toolbar-bg);
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: var(--toolbar-shadow);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        z-index: 2000;
+        backdrop-filter: blur(10px);
+        max-width: 90vw;
+        touch-action: none; /* Allow drag of toolbar */
+    }
+
+    .tool-section {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        border-right: 1px solid #ddd;
+        padding-right: 8px;
+    }
+    .tool-section:last-child { border-right: none; }
+
+    .btn {
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+    }
+    .btn:hover { background: #f0f0f0; }
+    .btn:active { background: #e0e0e0; transform: translateY(1px); }
+    
+    /* Inputs hidden, triggered by labels */
+    input[type="file"] { display: none; }
+
+    .file-status {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ccc;
+        margin-left: 4px;
+        display: inline-block;
+    }
+    .file-status.active { background: #4CAF50; box-shadow: 0 0 4px #4CAF50; }
+
+    /* Helper Overlay */
+    #help-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        opacity: 1;
+        transition: opacity 0.5s;
+    }
+    .help-content { max-width: 600px; line-height: 1.6; }
+    .shortcut { background: #333; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+
+    /* Responsive Tweaks */
+    @media (max-width: 600px) {
+        #toolbar { bottom: 10px; padding: 6px; gap: 4px; overflow-x: auto; justify-content: flex-start; width: 95%; }
+        .btn { font-size: 12px; padding: 6px 8px; }
+        .tool-section { border: none; }
+    }
+</style>
+</head>
+<body>
+
+    <!-- HELP OVERLAY -->
+    <div id="help-overlay" onclick="this.style.opacity='0'; setTimeout(()=>this.remove(), 500)">
+        <div class="help-content">
+            <h2>Canvas Studio</h2>
+            <p>Upload images or videos to create layouts.</p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>👆 <strong>Tap/Click</strong> to select objects.</li>
+                <li>✋ <strong>Drag center</strong> to move.</li>
+                <li>📐 <strong>Drag corners</strong> to resize (Shift locks aspect).</li>
+                <li>🔄 <strong>Green handle</strong> or <strong>Two fingers</strong> to rotate.</li>
+                <li>🖱️ <strong>Double Click</strong> video to enable native controls.</li>
+                <li>⌨️ <span class="shortcut">Del</span> to remove, <span class="shortcut">Arrows</span> to nudge.</li>
+            </ul>
+            <p style="margin-top:20px; font-size: 0.9em; opacity: 0.8;">Tap anywhere to start</p>
+        </div>
+    </div>
+
+    <!-- MAIN STAGE -->
+    <div id="stage">
+        <!-- Media objects injected here via JS -->
+    </div>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar" draggable="true">
+        <!-- File Section -->
+        <div class="tool-section">
+            <label class="btn" for="file-1" title="Load Media 1">
+                Media 1 <span class="file-status" id="status-1"></span>
+            </label>
+            <input type="file" id="file-1" accept="image/*,video/*">
+            
+            <label class="btn" for="file-2" title="Load Media 2">
+                Media 2 <span class="file-status" id="status-2"></span>
+            </label>
+            <input type="file" id="file-2" accept="image/*,video/*">
+        </div>
+
+        <!-- Layout Presets -->
+        <div class="tool-section">
+            <button class="btn" onclick="applyPreset('full')" title="Fullscreen">Full</button>
+            <button class="btn" onclick="applyPreset('split-v')" title="Left/Right Split">||</button>
+            <button class="btn" onclick="applyPreset('split-h')" title="Top/Bottom Split">=</button>
+            <button class="btn" onclick="applyPreset('quad')" title="Quarter Size">⚃</button>
+        </div>
+
+        <!-- Misc -->
+        <div class="tool-section">
+            <button class="btn" onclick="resetRotation()" title="Reset Rotation">0°</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * CANVAS STUDIO ENGINE
+ * Single-file vanilla JS architecture.
+ */
+
+// --- STATE MANAGEMENT ---
+const state = {
+    media: {
+        1: { element: null, active: false, rotation: 0, x: 0, y: 0, w: 300, h: 200 },
+        2: { element: null, active: false, rotation: 0, x: 0, y: 0, w: 300, h: 200 }
+    },
+    selection: null, // currently selected ID (1 or 2)
+    zIndexCounter: 10,
+    preserveRotationOnPreset: true
+};
+
+// --- DOM ELEMENTS ---
+const stage = document.getElementById('stage');
+const status1 = document.getElementById('status-1');
+const status2 = document.getElementById('status-2');
+
+// --- INITIALIZATION ---
+function init() {
+    // Setup file inputs
+    document.getElementById('file-1').addEventListener('change', (e) => handleFileSelect(e, 1));
+    document.getElementById('file-2').addEventListener('change', (e) => handleFileSelect(e, 2));
+
+    // Global deselect on empty stage click
+    stage.addEventListener('pointerdown', (e) => {
+        if (e.target === stage) deselectAll();
+    });
+
+    // Keyboard controls
+    window.addEventListener('keydown', handleKeyboard);
+
+    // Setup draggable toolbar
+    setupDraggableToolbar();
+}
+
+// --- FILE HANDLING ---
+function handleFileSelect(evt, id) {
+    const file = evt.target.files[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    const type = file.type.startsWith('video') ? 'video' : 'img';
+
+    // Cleanup existing if replacing
+    if (state.media[id].active) {
+        removeMedia(id, true); // true = isReplacing
+    }
+
+    createMediaObject(id, url, type, file.name);
+}
+
+function createMediaObject(id, url, type, filename) {
+    // Create DOM Structure
+    const container = document.createElement('div');
+    container.className = 'media-container';
+    container.id = `media-${id}`;
+    container.dataset.id = id;
+    
+    // Set initial random position slightly offset
+    const startX = 50 + (id * 20);
+    const startY = 100 + (id * 20);
+    container.style.transform = `translate(${startX}px, ${startY}px) rotate(0deg)`;
+    container.style.width = '300px';
+    container.style.height = '200px';
+    container.style.zIndex = ++state.zIndexCounter;
+
+    // Media Content
+    let content;
+    if (type === 'video') {
+        content = document.createElement('video');
+        content.src = url;
+        content.playsInline = true;
+        content.loop = true;
+        content.muted = false; // Let user control
+        // Auto-play videos silently initially? Let's wait for user interaction.
+    } else {
+        content = document.createElement('img');
+        content.src = url;
+        content.draggable = false;
+    }
+    content.className = 'media-content';
+    container.appendChild(content);
+
+    // Controls (Handles)
+    const handles = ['tl', 'tm', 'tr', 'mr', 'br', 'bm', 'bl', 'ml'];
+    handles.forEach(pos => {
+        const h = document.createElement('div');
+        h.className = `handle h-${pos}`;
+        h.dataset.handle = pos;
+        container.appendChild(h);
+    });
+
+    // Rotation Handle
+    const rotConnector = document.createElement('div');
+    rotConnector.className = 'h-rot-connector';
+    container.appendChild(rotConnector);
+
+    const rotHandle = document.createElement('div');
+    rotHandle.className = 'handle h-rot';
+    rotHandle.dataset.handle = 'rot';
+    container.appendChild(rotHandle);
+
+    // Close Button
+    const closeBtn = document.createElement('div');
+    closeBtn.className = 'btn-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.title = "Remove";
+    closeBtn.onclick = (e) => { e.stopPropagation(); removeMedia(id); };
+    container.appendChild(closeBtn);
+
+    // Info Overlay
+    const info = document.createElement('div');
+    info.className = 'info-overlay';
+    info.id = `info-${id}`;
+    container.appendChild(info);
+
+    // Interactions
+    container.addEventListener('pointerdown', (e) => onPointerDown(e, id));
+    container.addEventListener('dblclick', () => {
+        container.classList.toggle('interactive');
+        if (type === 'video') {
+            content.controls = !content.controls;
+        }
+    });
+
+    stage.appendChild(container);
+
+    // Update State
+    state.media[id] = {
+        element: container,
+        active: true,
+        rotation: 0,
+        x: startX,
+        y: startY,
+        w: 300,
+        h: 200,
+        url: url // stored to revoke later
+    };
+
+    updateStatusIndicator(id, true);
+    selectMedia(id);
+}
+
+function removeMedia(id, isReplacing = false) {
+    const m = state.media[id];
+    if (m.element) {
+        URL.revokeObjectURL(m.url); // Cleanup memory
+        m.element.remove();
+        m.element = null;
+        m.active = false;
+        
+        if (state.selection === id) state.selection = null;
+        updateStatusIndicator(id, false);
+        
+        // Reset file input to allow selecting same file again
+        if (!isReplacing) {
+            document.getElementById(`file-${id}`).value = '';
+        }
+    }
+}
+
+function updateStatusIndicator(id, isActive) {
+    const el = document.getElementById(`status-${id}`);
+    if (isActive) el.classList.add('active');
+    else el.classList.remove('active');
+}
+
+// --- INTERACTION ENGINE (Drag, Resize, Rotate) ---
+
+let isDragging = false;
+let dragType = null; // 'move', 'resize', 'rotate'
+let activeId = null;
+let startX, startY;
+let initialParams = {}; // Stores snapshot of rect/rotation at start of drag
+
+function onPointerDown(e, id) {
+    // Ignore if touching native video controls
+    if (e.target.tagName === 'VIDEO' && e.target.controls) return;
+    // Ignore close button clicks handled separately
+    if (e.target.classList.contains('btn-close')) return;
+
+    e.preventDefault();
+    e.stopPropagation(); // Stop bubbling to stage
+    
+    stage.setPointerCapture(e.pointerId);
+    selectMedia(id);
+    
+    activeId = id;
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    const m = state.media[id];
+    const target = e.target;
+
+    // Determine Action
+    if (target.dataset.handle === 'rot') {
+        dragType = 'rotate';
+    } else if (target.dataset.handle) {
+        dragType = 'resize';
+        initialParams.handle = target.dataset.handle;
+    } else {
+        dragType = 'move';
+    }
+
+    // Snapshot State
+    initialParams.x = m.x;
+    initialParams.y = m.y;
+    initialParams.w = m.w;
+    initialParams.h = m.h;
+    initialParams.rotation = m.rotation;
+    
+    // For Rotation calculations
+    const rect = m.element.getBoundingClientRect();
+    initialParams.centerX = rect.left + rect.width / 2;
+    initialParams.centerY = rect.top + rect.height / 2;
+    
+    // Attach global move/up listeners
+    stage.addEventListener('pointermove', onPointerMove);
+    stage.addEventListener('pointerup', onPointerUp);
+}
+
+function onPointerMove(e) {
+    if (!isDragging || !activeId) return;
+    e.preventDefault();
+
+    const m = state.media[activeId];
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (dragType === 'move') {
+        m.x = initialParams.x + dx;
+        m.y = initialParams.y + dy;
+        applyTransform(activeId);
+    } 
+    else if (dragType === 'rotate') {
+        // Calculate angle relative to center
+        const rads = Math.atan2(e.clientY - initialParams.centerY, e.clientX - initialParams.centerX);
+        const deg = rads * (180 / Math.PI);
+        // Offset by -90 because handle is at top (which is -90 in trig)
+        m.rotation = deg + 90; 
+        
+        // Show degrees
+        const info = document.getElementById(`info-${activeId}`);
+        info.style.display = 'block';
+        info.innerText = `${Math.round(m.rotation)}°`;
+        
+        applyTransform(activeId);
+    } 
+    else if (dragType === 'resize') {
+        handleResize(e, m, dx, dy);
+    }
+}
+
+function onPointerUp(e) {
+    if (isDragging && activeId) {
+        const info = document.getElementById(`info-${activeId}`);
+        if (info) info.style.display = 'none';
+    }
+    
+    isDragging = false;
+    dragType = null;
+    activeId = null;
+    stage.releasePointerCapture(e.pointerId);
+    stage.removeEventListener('pointermove', onPointerMove);
+    stage.removeEventListener('pointerup', onPointerUp);
+}
+
+// Complex Resize Logic to handle rotation and aspect ratio
+function handleResize(e, m, rawDx, rawDy) {
+    const handle = initialParams.handle;
+    const isShift = e.shiftKey;
+    
+    // 1. Project mouse movement into the element's local coordinate system (unrotated)
+    // This is crucial so resizing works intuitively even when rotated 45deg etc.
+    const angleRad = m.rotation * (Math.PI / 180);
+    const cos = Math.cos(-angleRad);
+    const sin = Math.sin(-angleRad);
+    
+    // Rotate the delta vector
+    const dx = rawDx * cos - rawDy * sin;
+    const dy = rawDx * sin + rawDy * cos;
+
+    let newW = initialParams.w;
+    let newH = initialParams.h;
+    let newX = initialParams.x;
+    let newY = initialParams.y;
+
+    // 2. Apply deltas based on handle
+    if (handle.includes('r')) newW = initialParams.w + dx;
+    if (handle.includes('l')) newW = initialParams.w - dx;
+    if (handle.includes('b')) newH = initialParams.h + dy;
+    if (handle.includes('t')) newH = initialParams.h - dy;
+
+    // 3. Aspect Ratio Lock
+    if (isShift) {
+        const ratio = initialParams.w / initialParams.h;
+        // Simple heuristic: adjust the smaller dimension change to match ratio
+        if (Math.abs(newW - initialParams.w) > Math.abs(newH - initialParams.h)) {
+            newH = newW / ratio;
+        } else {
+            newW = newH * ratio;
+        }
+    }
+
+    // Minimum size constraint
+    if (newW < 50) newW = 50;
+    if (newH < 50) newH = 50;
+
+    // 4. Position correction (center expansion logic simplification)
+    // When we change width/height on a rotated element in CSS, it expands from center.
+    // We need to adjust x/y to make it look like it's expanding from the opposite corner.
+    // Calculate center shift in local space
+    const deltaW = newW - initialParams.w;
+    const deltaH = newH - initialParams.h;
+    
+    let localShiftX = 0;
+    let localShiftY = 0;
+
+    if (handle.includes('r')) localShiftX = deltaW / 2;
+    else if (handle.includes('l')) localShiftX = -deltaW / 2;
+    
+    if (handle.includes('b')) localShiftY = deltaH / 2;
+    else if (handle.includes('t')) localShiftY = -deltaH / 2;
+
+    // Rotate this shift back to global space to update X/Y
+    const globalShiftX = localShiftX * Math.cos(angleRad) - localShiftY * Math.sin(angleRad);
+    const globalShiftY = localShiftX * Math.sin(angleRad) + localShiftY * Math.cos(angleRad);
+
+    m.w = newW;
+    m.h = newH;
+    m.x = initialParams.x + globalShiftX;
+    m.y = initialParams.y + globalShiftY;
+
+    applyTransform(activeId);
+}
+
+function applyTransform(id) {
+    const m = state.media[id];
+    if (!m.element) return;
+    
+    m.element.style.transform = `translate(${m.x}px, ${m.y}px) rotate(${m.rotation}deg)`;
+    m.element.style.width = `${m.w}px`;
+    m.element.style.height = `${m.h}px`;
+}
+
+function selectMedia(id) {
+    // Deselect others
+    Object.keys(state.media).forEach(k => {
+        const m = state.media[k];
+        if (m.element) m.element.classList.remove('selected');
+    });
+
+    state.selection = id;
+    const m = state.media[id];
+    m.element.classList.add('selected');
+    m.element.style.zIndex = ++state.zIndexCounter;
+}
+
+function deselectAll() {
+    state.selection = null;
+    Object.keys(state.media).forEach(k => {
+        const m = state.media[k];
+        if (m.element) {
+            m.element.classList.remove('selected');
+            m.element.classList.remove('interactive'); // Hide native controls
+            const vid = m.element.querySelector('video');
+            if (vid) vid.controls = false;
+        }
+    });
+}
+
+// --- LAYOUT PRESETS ---
+
+function applyPreset(type) {
+    if (!state.selection) return;
+    const m = state.media[state.selection];
+    if (!m.element) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Transition helper
+    m.element.style.transition = 'all 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+    
+    setTimeout(() => { m.element.style.transition = ''; }, 350); // Remove transition after
+
+    if (!state.preserveRotationOnPreset) m.rotation = 0;
+
+    switch (type) {
+        case 'full':
+            m.x = vw / 2 - vw/2; // CSS transform is from center? No, top-left relative.
+            // Actually our CSS transform is translate(X, Y). Origin is center.
+            // Wait, my logic above sets x/y as Top Left?
+            // Let's check createMediaObject: transform-origin is center center.
+            // So X/Y is the position of the CENTER or TopLeft?
+            // In `onPointerMove`, we modify x/y directly used in translate. 
+            // Usually translate moves the element from its default static position.
+            // Let's simplify: Set specific rects.
+            
+            // Correction: To animate smoothly, we update internal state m.x/m.y/m.w/m.h
+            // For "Full": center is vw/2, vh/2. W is vw, H is vh.
+            // Since transform-origin is center, translate(x,y) moves the center?
+            // No, standard CSS: static position is 0,0. translate moves it relative to that.
+            // So X/Y acts as "Top Left" IF we account for width/height offset?
+            // Let's assume X/Y is Top-Left coordinates for simplicity in math, 
+            // BUT transform: translate moves the element.
+            // Let's standardize: X,Y in state = Center X, Center Y.
+            // Refactoring createMediaObject logic slightly to ensure X,Y represents center for easier rotation.
+            
+            // Actually, in my code: `startX` was top-left based?
+            // `translate(50px, 50px)` moves top-left corner to 50,50.
+            // Center is `50 + w/2`.
+            
+            // Preset Logic (Targeting Top Left X/Y):
+            m.x = 0; m.y = 0; m.w = vw; m.h = vh;
+            break;
+
+        case 'split-v': // Left / Right
+            // If active is 1, go left. If 2, go right? 
+            // Or just toggle based on current position? 
+            // Let's imply: Left Half.
+            m.w = vw / 2;
+            m.h = vh;
+            m.y = 0;
+            // Logic: If cur X > vw/2 go right, else left
+            if (m.x > vw / 4) m.x = vw / 2; else m.x = 0; 
+            break;
+            
+        case 'split-h': // Top / Bottom
+            m.w = vw;
+            m.h = vh / 2;
+            m.x = 0;
+            if (m.y > vh / 4) m.y = vh / 2; else m.y = 0;
+            break;
+            
+        case 'quad':
+            m.w = vw / 2;
+            m.h = vh / 2;
+            // Snap to nearest quadrant
+            m.x = (m.x + m.w/2 > vw/2) ? vw/2 : 0;
+            m.y = (m.y + m.h/2 > vh/2) ? vh/2 : 0;
+            break;
+    }
+    
+    applyTransform(state.selection);
+}
+
+function resetRotation() {
+    if (state.selection) {
+        const m = state.media[state.selection];
+        m.rotation = 0;
+        m.element.style.transition = 'transform 0.3s';
+        applyTransform(state.selection);
+        setTimeout(() => m.element.style.transition = '', 300);
+    }
+}
+
+// --- KEYBOARD SHORTCUTS ---
+function handleKeyboard(e) {
+    if (!state.selection) return;
+    const m = state.media[state.selection];
+    
+    const step = e.shiftKey ? 10 : 1;
+    let handled = true;
+
+    switch(e.key) {
+        case 'ArrowUp': m.y -= step; break;
+        case 'ArrowDown': m.y += step; break;
+        case 'ArrowLeft': m.x -= step; break;
+        case 'ArrowRight': m.x += step; break;
+        case 'Delete':
+        case 'Backspace':
+            removeMedia(state.selection);
+            handled = true;
+            break;
+        default: handled = false;
+    }
+
+    if (handled) {
+        e.preventDefault();
+        applyTransform(state.selection);
+    }
+}
+
+// --- TOOLBAR DRAGGING ---
+function setupDraggableToolbar() {
+    const toolbar = document.getElementById('toolbar');
+    let isDraggingBar = false;
+    let offset = { x: 0, y: 0 };
+
+    toolbar.addEventListener('pointerdown', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'LABEL') return;
+        isDraggingBar = true;
+        const rect = toolbar.getBoundingClientRect();
+        // Calculate offset from center since toolbar uses transform translate
+        // Note: simple top/left implementation
+        offset.x = e.clientX - rect.left;
+        offset.y = e.clientY - rect.top;
+        toolbar.style.transition = 'none';
+        toolbar.setPointerCapture(e.pointerId);
+    });
+
+    toolbar.addEventListener('pointermove', (e) => {
+        if (!isDraggingBar) return;
+        e.preventDefault();
+        toolbar.style.left = `${e.clientX - offset.x + (toolbar.offsetWidth/2)}px`; // Center adjustment
+        toolbar.style.top = `${e.clientY - offset.y}px`;
+        toolbar.style.bottom = 'auto';
+        toolbar.style.transform = 'translateX(-50%)';
+    });
+
+    toolbar.addEventListener('pointerup', (e) => {
+        isDraggingBar = false;
+        toolbar.releasePointerCapture(e.pointerId);
+    });
+}
+
+// Boot up
+init();
+
+</script>
+</body>
+</html>
+
