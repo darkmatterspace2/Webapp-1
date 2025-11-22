@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Show Only Names = "John"</h2>
+
+<button onclick="loadNames()">Load</button>
+
+<table border="1" cellpadding="8" style="margin-top:15px;">
+  <thead>
+    <tr>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// TODO: Replace with your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBd7wU-iBfeLGTfNbizuCAn17DBJQxY2oM",
+  authDomain: "webapp-1-2517e.firebaseapp.com",
+  databaseURL: "https://webapp-1-2517e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "webapp-1-2517e",
+  storageBucket: "webapp-1-2517e.firebasestorage.app",
+  messagingSenderId: "485399050408",
+  appId: "1:485399050408:web:f7f44f4351a6ac187f6a9d",
+  measurementId: "G-019MCYPBD2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function loadNames() {
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = ""; // clear old rows
+
+  // Query: only names equal to "John"
+  db.ref("savedNames")
+    .orderByValue()
+    .equalTo("John")
+    .once("value")
+    .then(snapshot => {
+      if (!snapshot.exists()) {
+        tbody.innerHTML = "<tr><td>No records found</td></tr>";
+        return;
+      }
+
+      snapshot.forEach(child => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${child.val()}</td>`;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err => {
+      console.error(err);
+    });
+}
+</script>
+
+</body>
+</html>

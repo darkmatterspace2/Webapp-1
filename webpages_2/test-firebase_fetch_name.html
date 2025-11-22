@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>All Saved Names</h2>
+
+<button onclick="loadNames()">Load Names</button>
+
+<ul id="namesList"></ul>
+
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// TODO: Replace with your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBd7wU-iBfeLGTfNbizuCAn17DBJQxY2oM",
+  authDomain: "webapp-1-2517e.firebaseapp.com",
+  databaseURL: "https://webapp-1-2517e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "webapp-1-2517e",
+  storageBucket: "webapp-1-2517e.firebasestorage.app",
+  messagingSenderId: "485399050408",
+  appId: "1:485399050408:web:f7f44f4351a6ac187f6a9d",
+  measurementId: "G-019MCYPBD2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Load all names
+function loadNames() {
+  const list = document.getElementById("namesList");
+  list.innerHTML = ""; // Clear old list
+
+  db.ref("savedNames").once("value")
+    .then(snapshot => {
+      if (!snapshot.exists()) {
+        list.innerHTML = "<li>No names found</li>";
+        return;
+      }
+
+      snapshot.forEach(child => {
+        const li = document.createElement("li");
+        li.textContent = child.val();
+        list.appendChild(li);
+      });
+    })
+    .catch(err => {
+      alert("Error: " + err);
+    });
+}
+</script>
+
+</body>
+</html>

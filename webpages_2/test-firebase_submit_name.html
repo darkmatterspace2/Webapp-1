@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Hello World + Save Name to Firebase</h2>
+
+<input id="nameInput" placeholder="Enter your name">
+<button onclick="saveName()">Save Name</button>
+
+<p id="status"></p>
+
+<!-- Namespaced Firebase v8 scripts (stable & easiest for beginners) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// TODO: Replace with your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBd7wU-iBfeLGTfNbizuCAn17DBJQxY2oM",
+  authDomain: "webapp-1-2517e.firebaseapp.com",
+  databaseURL: "https://webapp-1-2517e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "webapp-1-2517e",
+  storageBucket: "webapp-1-2517e.firebasestorage.app",
+  messagingSenderId: "485399050408",
+  appId: "1:485399050408:web:f7f44f4351a6ac187f6a9d",
+  measurementId: "G-019MCYPBD2"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Initialize DB AFTER firebase.initializeApp
+const db = firebase.database();
+
+// Save function
+function saveName() {
+  const name = document.getElementById("nameInput").value;
+
+  db.ref("savedNames").push(name)
+    .then(() => {
+      document.getElementById("status").textContent = "Name saved!";
+    })
+    .catch(err => {
+      document.getElementById("status").textContent = "Error: " + err;
+    });
+}
+</script>
+
+</body>
+</html>

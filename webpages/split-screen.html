@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Object Video Player</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Define a fixed viewing stage size for drag and drop to make sense */
+        #split-screen-container {
+            width: 800px;
+            height: 450px;
+            background-color: #1f2937; /* gray-800 */
+            position: relative; /* Crucial for absolute positioning of children */
+        }
+
+        /* Fullscreen handling for the container */
+        #split-screen-container:-webkit-full-screen,
+        #split-screen-container:-moz-full-screen,
+        #split-screen-container:fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+
+        /* Styling for the draggable/resizable wrappers */
+        .media-wrapper {
+            position: absolute;
+            transform-origin: center; /* Essential for rotation */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            border: 1px solid transparent;
+            /* Ensures media fills the wrapper */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            /* Default non-active cursor */
+            cursor: pointer;
+        }
+
+        .media-wrapper.active {
+            outline: 2px solid #3b82f6; /* Blue border for active state */
+            outline-offset: 4px;
+            z-index: 100 !important; /* Bring to front when active */
+            cursor: grab;
+        }
+
+        /* Base handle style */
+        .handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border: 1px solid #3b82f6; /* blue-500 */
+            border-radius: 2px;
+            z-index: 105;
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+            /* Centers handle on the edge/corner by negative margin */
+            margin: -5px; 
+            display: none; /* Hidden by default */
+        }
+        .media-wrapper.active .handle {
+            display: block;
+        }
+
+        /* Specific cursor styles for resize handles */
+        .handle[data-direction*="t"], .handle[data-direction*="b"] { cursor: ns-resize; }
+        .handle[data-direction*="l"], .handle[data-direction*="r"] { cursor: ew-resize; }
+        .handle[data-direction^="tl"], .handle[data-direction^="br"] { cursor: nwse-resize; }
+        .handle[data-direction^="tr"], .handle[data-direction^="bl"] { cursor: nesw-resize; }
+        
+        /* Rotation handle */
+        .rotate-handle {
+            position: absolute;
+            top: -40px; /* Position above the element */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background-color: #10b981; /* emerald-500 */
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: grab; 
+            z-index: 105;
+            display: none;
+        }
+        .media-wrapper.active .rotate-handle {
+             display: block;
+        }
+
+        .rotate-line {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background-color: #10b981;
+            z-index: 104;
+            display: none;
+        }
+        .media-wrapper.active .rotate-line {
+             display: block;
+        }
+
+        /* Set handle positions */
+        .handle.tl { top: 0; left: 0; }
+        .handle.tm { top: 0; left: 50%; }
+        .handle.tr { top: 0; right: 0; }
+        .handle.ml { top: 50%; left: 0; }
+        .handle.mr { top: 50%; right: 0; }
+        .handle.bl { bottom: 0; left: 0; }
+        .handle.bm { bottom: 0; left: 50%; }
+        .handle.br { bottom: 0; right: 0; }
+
+        /* Hide the fullscreen button itself when the container is in fullscreen */
+        #fullscreen-btn:fullscreen {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 font-sans text-white min-h-screen flex flex-col items-center py-8" oncontextmenu="return false;">
+
+    <header class="text-center mb-8">
+        <h1 class="text-3xl font-extrabold text-blue-400">Dynamic Object Video Player</h1>
+        <p class="text-gray-400 mt-2">Click to activate object. Drag to move, use white handles to resize (Hold SHIFT for aspect lock on corners), and drag the **green circle** to rotate.</p>
+    </header>
+
+    <!-- Controls Area -->
+    <div class="w-full max-w-4xl p-4 bg-gray-800 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+        
+        <!-- File Input 1 -->
+        <div class="flex-1">
+            <label for="file-1" class="block text-sm font-medium text-gray-300 mb-1">Media 1</label>
+            <input type="file" id="file-1" accept="video/*,image/*" data-target="media-1-wrapper" class="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition duration-150 rounded-lg p-1 bg-gray-700 cursor-pointer">
+        </div>
+        
+        <!-- File Input 2 -->
+        <div class="flex-1">
+            <label for="file-2" class="block text-sm font-medium text-gray-300 mb-1">Media 2</label>
+            <input type="file" id="file-2" accept="video/*,image/*" data-target="media-2-wrapper" class="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition duration-150 rounded-lg p-1 bg-gray-700 cursor-pointer">
+        </div>
+    </div>
+
+    <!-- Split Screen Container (The Stage) -->
+    <div id="split-screen-container" class="max-w-4xl bg-gray-800 rounded-xl shadow-2xl relative overflow-hidden">
+        
+        <!-- Fullscreen Button -->
+        <button id="fullscreen-btn" class="absolute top-3 right-3 z-[200] p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md transition duration-150 opacity-90" onclick="toggleFullscreen()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l4 4m9 9v4m0 0h-4m4 0l-4-4m-9 4l4-4M4 20h4M20 4h-4m4 0l-4 4"/>
+            </svg>
+        </button>
+
+        <!-- Media 1 Wrapper (Initial position: Top-Left) -->
+        <div id="media-1-wrapper" data-media-id="1" class="media-wrapper bg-gray-900" 
+             style="width: 300px; height: 180px; top: 20px; left: 20px; transform: rotate(0deg);">
+            <div class="media-content flex items-center justify-center h-full text-gray-500 text-center text-sm">
+                Click to load Media 1
+            </div>
+        </div>
+
+        <!-- Media 2 Wrapper (Initial position: Bottom-Right) -->
+        <div id="media-2-wrapper" data-media-id="2" class="media-wrapper bg-gray-900" 
+             style="width: 300px; height: 180px; top: 220px; left: 480px; transform: rotate(0deg);">
+            <div class="media-content flex items-center justify-center h-full text-gray-500 text-center text-sm">
+                Click to load Media 2
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        const splitScreenContainer = document.getElementById('split-screen-container');
+        const mediaWrappers = document.querySelectorAll('.media-wrapper');
+        const RESIZE_DIRECTIONS = ['tl', 'tm', 'tr', 'ml', 'mr', 'bl', 'bm', 'br'];
+        let zIndexCounter = 10;
+        let isShiftDown = false;
+
+        // --- Core Media Loading Logic ---
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            const targetId = event.target.getAttribute('data-target');
+            const targetWrapper = document.getElementById(targetId);
+
+            if (!file) return;
+
+            const contentArea = targetWrapper.querySelector('.media-content');
+            contentArea.innerHTML = '';
+            contentArea.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-500', 'text-center', 'text-sm');
+            contentArea.classList.add('w-full', 'h-full', 'p-0');
+            
+            const fileUrl = URL.createObjectURL(file);
+            let mediaElement;
+
+            if (file.type.startsWith('video/')) {
+                mediaElement = document.createElement('video');
+                mediaElement.controls = true; 
+                mediaElement.loop = true;
+                mediaElement.muted = false;
+            } else if (file.type.startsWith('image/')) {
+                mediaElement = document.createElement('img');
+            } else {
+                contentArea.textContent = 'Unsupported file type.';
+                return;
+            }
+
+            mediaElement.src = fileUrl;
+            mediaElement.className = 'w-full h-full object-contain'; // Scale content within wrapper
+            
+            contentArea.appendChild(mediaElement);
+        }
+
+        // Attach event listeners to both file inputs
+        document.getElementById('file-1').addEventListener('change', handleFile);
+        document.getElementById('file-2').addEventListener('change', handleFile);
+
+
+        // --- Manipulation System Variables ---
+
+        let activeElement = null; 
+        let action = null; // 'drag', 'resize', 'rotate'
+        let direction = null; // For resize: 'tl', 'br', etc.
+        let startX, startY;
+        let initialLeft, initialTop, initialWidth, initialHeight, initialAngle;
+        let minSize = 50; 
+
+        // Get the current rotation angle from the style
+        function getRotationAngle(element) {
+            const transform = element.style.transform;
+            const match = transform.match(/rotate\(([^deg]+)deg\)/);
+            return match ? parseFloat(match[1]) : 0;
+        }
+
+        // Function to create and attach handles
+        function attachHandles(element) {
+            // Remove existing handles first
+            element.querySelectorAll('.handle, .rotate-handle, .rotate-line').forEach(h => h.remove());
+
+            // 1. Create Resize Handles (8 total)
+            RESIZE_DIRECTIONS.forEach(dir => {
+                const handle = document.createElement('div');
+                handle.className = `handle ${dir}`;
+                handle.setAttribute('data-action', 'resize');
+                handle.setAttribute('data-direction', dir);
+                
+                // Set position class defined in CSS
+                handle.classList.add(dir); 
+                
+                element.appendChild(handle);
+            });
+
+            // 2. Create Rotation Handle and Line
+            const rotateLine = document.createElement('div');
+            rotateLine.className = 'rotate-line';
+            element.appendChild(rotateLine);
+
+            const rotateHandle = document.createElement('div');
+            rotateHandle.className = 'rotate-handle';
+            rotateHandle.setAttribute('data-action', 'rotate');
+            element.appendChild(rotateHandle);
+        }
+        
+        // --- Activation and Z-Index Management ---
+
+        function setActive(element) {
+            // Deactivate all others
+            mediaWrappers.forEach(el => {
+                el.classList.remove('active');
+                el.style.cursor = 'pointer';
+                el.querySelectorAll('.handle, .rotate-handle, .rotate-line').forEach(h => h.remove());
+            });
+
+            // Activate the clicked one
+            activeElement = element;
+
+            // FIX: Only attempt to set properties and attach handles if the element is not null
+            if (activeElement) {
+                activeElement.classList.add('active');
+                activeElement.style.cursor = 'grab';
+
+                // Bring to front
+                zIndexCounter++;
+                activeElement.style.zIndex = zIndexCounter;
+
+                // Attach handles
+                attachHandles(activeElement);
+            }
+        }
+
+        // Global click listener to deactivate if clicking outside
+        document.addEventListener('mousedown', (e) => {
+            // e.target.closest('.media-wrapper') returns null if clicking outside a wrapper
+            if (activeElement && !e.target.closest('.media-wrapper') && e.target.id !== 'fullscreen-btn') {
+                setActive(null);
+            }
+        });
+
+        // --- Core Mouse/Touch Handlers ---
+
+        function getEventPoint(e) {
+            return e.touches ? e.touches[0] : e;
+        }
+
+        // Start Manipulation (Drag, Resize, or Rotate)
+        function startManipulation(e) {
+            const point = getEventPoint(e);
+            const target = e.target;
+            
+            // 1. Determine active element
+            const wrapper = target.closest('.media-wrapper');
+
+            if (wrapper) {
+                // If wrapper is not active, activate it and start drag (e.g., clicking on the video)
+                if (wrapper !== activeElement) {
+                    setActive(wrapper);
+                    // The target is the wrapper/content itself, so this should be a drag action
+                    action = 'drag';
+                }
+            }
+            
+            // Check if we hit a handle
+            if (target.getAttribute('data-action')) {
+                action = target.getAttribute('data-action');
+            } 
+            
+            // Ensure we have an active element and an action
+            if (!activeElement || !action) return;
+
+            e.preventDefault(); // Prevent default browser behavior
+
+            // 2. Capture initial state
+            const rect = activeElement.getBoundingClientRect();
+            startX = point.clientX;
+            startY = point.clientY;
+
+            initialLeft = parseFloat(activeElement.style.left);
+            initialTop = parseFloat(activeElement.style.top);
+            initialWidth = rect.width;
+            initialHeight = rect.height;
+            initialAngle = getRotationAngle(activeElement);
+            
+            if (action === 'resize') {
+                direction = target.getAttribute('data-direction');
+            } else if (action === 'rotate') {
+                // Calculate center point for rotation
+                const centerX = initialLeft + initialWidth / 2;
+                const centerY = initialTop + initialHeight / 2;
+                
+                // Calculate angle from center to start point
+                initialAngle = Math.atan2(startY - (splitScreenContainer.getBoundingClientRect().top + centerY), 
+                                          startX - (splitScreenContainer.getBoundingClientRect().left + centerX)) * (180 / Math.PI);
+                // Get the current CSS rotation value
+                initialAngle -= getRotationAngle(activeElement);
+            }
+        }
+
+        // Apply Manipulation (Move, Resize, or Rotate)
+        function applyManipulation(e) {
+            if (!activeElement || !action) return;
+            const point = getEventPoint(e);
+            e.preventDefault();
+
+            const dx = point.clientX - startX;
+            const dy = point.clientY - startY;
+            const containerRect = splitScreenContainer.getBoundingClientRect();
+
+            if (action === 'drag') {
+                // Drag Logic
+                let newLeft = initialLeft + dx;
+                let newTop = initialTop + dy;
+
+                // Clamp to boundaries
+                newLeft = Math.max(0, Math.min(newLeft, containerRect.width - initialWidth));
+                newTop = Math.max(0, Math.min(newTop, containerRect.height - initialHeight));
+
+                activeElement.style.left = `${newLeft}px`;
+                activeElement.style.top = `${newTop}px`;
+                
+            } else if (action === 'resize') {
+                // Resize Logic (Complex)
+                const shiftKey = isShiftDown && direction.length === 2; // Only corners + shift lock aspect
+
+                let newX = initialLeft;
+                let newY = initialTop;
+                let newW = initialWidth;
+                let newH = initialHeight;
+
+                // 1. Apply changes based on direction
+                if (direction.includes('l')) {
+                    newW = initialWidth - dx;
+                    newX = initialLeft + dx;
+                } else if (direction.includes('r')) {
+                    newW = initialWidth + dx;
+                }
+                
+                if (direction.includes('t')) {
+                    newH = initialHeight - dy;
+                    newY = initialTop + dy;
+                } else if (direction.includes('b')) {
+                    newH = initialHeight + dy;
+                }
+
+                // 2. Clamp to minimum size
+                if (newW < minSize) { 
+                    if (direction.includes('l')) { newX = newX + (newW - minSize); }
+                    newW = minSize; 
+                }
+                if (newH < minSize) { 
+                    if (direction.includes('t')) { newY = newY + (newH - minSize); }
+                    newH = minSize; 
+                }
+
+                // 3. Aspect Ratio Lock (Shift key pressed on corner handles)
+                if (shiftKey) {
+                    const aspectRatio = initialWidth / initialHeight;
+                    // Determine which dimension is the driving force (the one that changed most)
+                    const ratioW = newW / initialWidth;
+                    const ratioH = newH / initialHeight;
+
+                    if (Math.abs(ratioW - 1) > Math.abs(ratioH - 1)) {
+                        // Width is the driver
+                        newH = newW / aspectRatio;
+                    } else {
+                        // Height is the driver
+                        newW = newH * aspectRatio;
+                    }
+
+                    // Adjust position based on locked ratio and direction
+                    if (direction.includes('l')) { newX = initialLeft + initialWidth - newW; }
+                    if (direction.includes('t')) { newY = initialTop + initialHeight - newH; }
+                }
+
+                // 4. Update element styles
+                activeElement.style.left = `${newX}px`;
+                activeElement.style.top = `${newY}px`;
+                activeElement.style.width = `${newW}px`;
+                activeElement.style.height = `${newH}px`;
+
+
+            } else if (action === 'rotate') {
+                // Rotation Logic
+                const centerX = initialLeft + initialWidth / 2;
+                const centerY = initialTop + initialHeight / 2;
+
+                const currentAngle = Math.atan2(point.clientY - (containerRect.top + centerY), 
+                                                point.clientX - (containerRect.left + centerX)) * (180 / Math.PI);
+                
+                let newAngle = currentAngle - initialAngle;
+
+                activeElement.style.transform = `rotate(${newAngle}deg)`;
+            }
+        }
+
+        // End Manipulation
+        function endManipulation() {
+            if (activeElement) {
+                // Ensure the active element state is correct
+                activeElement.style.cursor = 'grab';
+            }
+            action = null;
+            direction = null;
+        }
+
+        // --- Event Listeners Setup ---
+
+        mediaWrappers.forEach(wrapper => {
+            wrapper.addEventListener('mousedown', startManipulation);
+            wrapper.addEventListener('touchstart', startManipulation);
+        });
+        
+        // Global listeners for mouse/touch movement and end
+        document.addEventListener('mousemove', applyManipulation);
+        document.addEventListener('mouseup', endManipulation);
+        document.addEventListener('touchmove', applyManipulation);
+        document.addEventListener('touchend', endManipulation);
+
+        // Shift Key Tracking for Aspect Ratio Lock
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Shift') {
+                isShiftDown = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift') {
+                isShiftDown = false;
+            }
+        });
+
+
+        // --- Fullscreen Logic (Unchanged) ---
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                if (splitScreenContainer.requestFullscreen) {
+                    splitScreenContainer.requestFullscreen();
+                } else if (splitScreenContainer.mozRequestFullScreen) {
+                    splitScreenContainer.mozRequestFullScreen();
+                } else if (splitScreenContainer.webkitRequestFullscreen) {
+                    splitScreenContainer.webkitRequestFullscreen();
+                } else if (splitScreenContainer.msRequestFullscreen) {
+                    splitScreenContainer.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

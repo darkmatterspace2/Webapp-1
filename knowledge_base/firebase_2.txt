@@ -1,0 +1,5 @@
+
+there is one variable name=input in JS
+input: $('name-input'),
+
+I want this to be populated with top 1 name value I fetch from firebase real time database

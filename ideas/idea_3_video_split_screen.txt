@@ -1,0 +1,29 @@
+make a standalone html where I can select 2 videos/images and i can see them side by side as if it is splitscreen video even after full screen. both videos are placing like split sreen which no gaps in between. I can choose files locally
+both videos should play independely. can play in different time, volume.
+
+I mean Build a web video/image player where the <video> element behaves exactly like a PowerPoint image/object:
+- Click video → show 8 resize handles (4 corners + 4 side midpoints) like MS Office
+- Drag any corner handle to freely resize (corners keep aspect ratio with Shift, otherwise stretch)
+- Drag anywhere on video to move/position it freely on the page
+- Show rotation handle (green circle on top) to rotate video
+- Fully responsive, works on desktop and touch devices
+Create a web video player using only HTML, CSS, and vanilla JavaScript (no libraries) that behaves 100% like a PowerPoint video object:
+
+- Click video → show 8 resize handles (corners + side midpoints) + green rotation handle on top
+- Drag to move, resize (corners preserve aspect with Shift), rotate freely
+
+additional features
+- Add a small floating toolbar with these preset buttons:
+  1. Fullscreen (100% width & height)
+  2. Top Half (top 50% of screen)
+  3. Bottom Half (bottom 50%)
+  4. Left Half (left 50%)
+  5. Right Half (right 50%)
+  6. Quad (top-left quarter) – optional 5th preset
+- When any preset button is clicked, instantly animate the video to that exact position and size (maximized vertically or horizontally as needed)
+- Works on desktop + touch devices
+- Keep it lightweight, no external libraries
+
+should have
+2 separate file upload option.
+can be able to close and replace any video/image files anytime.

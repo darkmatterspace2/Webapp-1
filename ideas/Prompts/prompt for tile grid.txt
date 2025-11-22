@@ -1,3 +1,19 @@
+checkt the below html code and give me more entries like this         { name: "AI Chatbot", link: "webpages/Al-chatbot.html", color: "bg-purple", size: "size-2x2", icon: icons.chat },
+        { name: "File Explorer", link: "webpages/file_explorer.html", color: "bg-yellow", size: "size-4x2", icon: icons.folder },
+        { name: "Media Gallery", link: "webpages/media_gallery.html", color: "bg-red", size: "size-2x1", icon: icons.image },
+        { name: "Portfolio Dashboard", link: "webpages/portfolio_dashboard.html", color: "bg-blue", size: "size-2x1", icon: icons.chart },
+        { name: "Split-Screen Tool", link: "webpages/split_screen_2_image_only_v2.html", color: "bg-teal", size: "size-2x1", icon: icons.split },
+        { name: "Cyberpunk Main page", link: "ideas/mainpage-cyberpunk-1.html", color: "bg-purple", size: "size-2x2", icon: icons.chat }
+
+
+
+for all applications appNames = ["Calculator", "Music", "Mail", "Settings", "Camera", "Maps", "Calendar", "Store", "Photos", "Weather", "News", "Video", "People", "OneDrive", "Word", "Excel", "PowerPoint", "OneNote", "Edge", "Skype", "Spotify", "Netflix", "Twitter", "Facebook", "Instagram", "LinkedIn", "Reddit", "Discord", "Zoom", "Teams", "Slack", "Notepad", "Paint", "Terminal", "Clock", "Alarm", "Timer", "Stopwatch", "Voice Rec", "Tasks", "To-Do", "Notes", "Wallet", "Pay", "Health", "Fitness", "Food", "Travel", "Money", "Sports", "Games", "Xbox", "Solitaire", "Chess", "Code", "DevTools", "Git", "Docker", "Admin", "Security", "System", "Network", "Wifi", "Bluetooth", "Printer", "Scanner", "Help", "Tips", "Search", "Run", "Files", "Backup", "Restore", "Update", "Power", "Battery", "Display", "Sound", "Mouse", "Keyboard", "Pen", "Touch", "Tablet", "Phone", "Messages", "Contacts", "Log", "Event", "Service", "Task Mgr", "Registry", "Editor", "Viewer", "Player", "Browser"];
+current it is coded to get random configs. make lines for each app like this 
+        { name: "Cyberpunk Main page", link: "ideas/mainpage-cyberpunk-1.html", color: "bg-purple", size: "size-2x2", icon: icons.chat }
+
+html file is given below:
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -248,107 +264,12 @@
 
     // 1. Fixed Tiles (The first 5)
     const fixedTiles = [
-        { name: "AI Chatbot", link: "webpages/AI-chatbot.html", color: "bg-purple", size: "size-2x2", icon: icons.chat },
+        { name: "AI Chatbot", link: "webpages/Al-chatbot.html", color: "bg-purple", size: "size-2x2", icon: icons.chat },
         { name: "File Explorer", link: "webpages/file_explorer.html", color: "bg-yellow", size: "size-4x2", icon: icons.folder },
         { name: "Media Gallery", link: "webpages/media_gallery.html", color: "bg-red", size: "size-2x1", icon: icons.image },
         { name: "Portfolio Dashboard", link: "webpages/portfolio_dashboard.html", color: "bg-blue", size: "size-2x1", icon: icons.chart },
         { name: "Split-Screen Tool", link: "webpages/split_screen_2_image_only_v2.html", color: "bg-teal", size: "size-2x1", icon: icons.split },
-        { name: "Cyberpunk Main page", link: "ideas/mainpage-cyberpunk-1.html", color: "bg-purple", size: "size-2x2", icon: icons.chat },
-        { name: "test-firebase_submit_name", link: "webpages_2/test-firebase_submit_name.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "test-firebase_fetch_name", link: "webpages_2/test-firebase_fetch_name.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "test-firebase_fetch_name_display_table", link: "webpages_2/test-firebase_fetch_name_display_table.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Settings", link: "webpages/Settings.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Camera", link: "webpages/Camera.html", color: "bg-blue", size: "size-2x2", icon: icons.generic },
-        { name: "Maps", link: "webpages/Maps.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "Calendar", link: "webpages/Calendar.html", color: "bg-red", size: "size-2x1", icon: icons.generic },
-        { name: "Store", link: "webpages/Store.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Photos", link: "webpages/Photos.html", color: "bg-pink", size: "size-4x2", icon: icons.generic },
-        { name: "Weather", link: "webpages/Weather.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "News", link: "webpages/News.html", color: "bg-green", size: "size-2x2", icon: icons.generic },
-        { name: "Video", link: "webpages/Video.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "People", link: "webpages/People.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "OneDrive", link: "webpages/OneDrive.html", color: "bg-yellow", size: "size-2x1", icon: icons.generic },
-        { name: "Word", link: "webpages/Word.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Excel", link: "webpages/Excel.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "PowerPoint", link: "webpages/PowerPoint.html", color: "bg-red", size: "size-1x1", icon: icons.generic },
-        { name: "OneNote", link: "webpages/OneNote.html", color: "bg-purple", size: "size-2x1", icon: icons.generic },
-        { name: "Edge", link: "webpages/Edge.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "Skype", link: "webpages/Skype.html", color: "bg-pink", size: "size-2x1", icon: icons.generic },
-        { name: "Spotify", link: "webpages/Spotify.html", color: "bg-green", size: "size-1x1", icon: icons.generic },
-        { name: "Netflix", link: "webpages/Netflix.html", color: "bg-red", size: "size-2x2", icon: icons.generic },
-        { name: "Twitter", link: "webpages/Twitter.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Facebook", link: "webpages/Facebook.html", color: "bg-blue", size: "size-2x1", icon: icons.generic },
-        { name: "Instagram", link: "webpages/Instagram.html", color: "bg-pink", size: "size-1x1", icon: icons.generic },
-        { name: "LinkedIn", link: "webpages/LinkedIn.html", color: "bg-teal", size: "size-2x2", icon: icons.generic },
-        { name: "Reddit", link: "webpages/Reddit.html", color: "bg-orange", size: "size-2x1", icon: icons.generic },
-        { name: "Discord", link: "webpages/Discord.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Zoom", link: "webpages/Zoom.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Teams", link: "webpages/Teams.html", color: "bg-purple", size: "size-2x2", icon: icons.generic },
-        { name: "Slack", link: "webpages/Slack.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "Notepad", link: "webpages/Notepad.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Paint", link: "webpages/Paint.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Terminal", link: "webpages/Terminal.html", color: "bg-red", size: "size-2x1", icon: icons.generic },
-        { name: "Clock", link: "webpages/Clock.html", color: "bg-green", size: "size-1x1", icon: icons.generic },
-        { name: "Alarm", link: "webpages/Alarm.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Timer", link: "webpages/Timer.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Stopwatch", link: "webpages/Stopwatch.html", color: "bg-teal", size: "size-2x1", icon: icons.generic },
-        { name: "Voice Rec", link: "webpages/VoiceRec.html", color: "bg-red", size: "size-1x1", icon: icons.generic },
-        { name: "Tasks", link: "webpages/Tasks.html", color: "bg-purple", size: "size-1x2", icon: icons.generic },
-        { name: "To-Do", link: "webpages/ToDo.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Notes", link: "webpages/Notes.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Wallet", link: "webpages/Wallet.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Pay", link: "webpages/Pay.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Health", link: "webpages/Health.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Fitness", link: "webpages/Fitness.html", color: "bg-pink", size: "size-1x1", icon: icons.generic },
-        { name: "Food", link: "webpages/Food.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Travel", link: "webpages/Travel.html", color: "bg-blue", size: "size-2x2", icon: icons.generic },
-        { name: "Money", link: "webpages/Money.html", color: "bg-green", size: "size-1x1", icon: icons.generic },
-        { name: "Sports", link: "webpages/Sports.html", color: "bg-red", size: "size-4x1", icon: icons.generic },
-        { name: "Games", link: "webpages/Games.html", color: "bg-purple", size: "size-4x2", icon: icons.generic },
-        { name: "Xbox", link: "webpages/Xbox.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Solitaire", link: "webpages/Solitaire.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Chess", link: "webpages/Chess.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Code", link: "webpages/Code.html", color: "bg-red", size: "size-2x1", icon: icons.generic },
-        { name: "DevTools", link: "webpages/DevTools.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Git", link: "webpages/Git.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Docker", link: "webpages/Docker.html", color: "bg-blue", size: "size-2x2", icon: icons.generic },
-        { name: "Admin", link: "webpages/Admin.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "Security", link: "webpages/Security.html", color: "bg-red", size: "size-1x1", icon: icons.generic },
-        { name: "System", link: "webpages/System.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Network", link: "webpages/Network.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Wifi", link: "webpages/Wifi.html", color: "bg-teal", size: "size-2x2", icon: icons.generic },
-        { name: "Bluetooth", link: "webpages/Bluetooth.html", color: "bg-pink", size: "size-1x1", icon: icons.generic },
-        { name: "Printer", link: "webpages/Printer.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Scanner", link: "webpages/Scanner.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Help", link: "webpages/Help.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Tips", link: "webpages/Tips.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Search", link: "webpages/Search.html", color: "bg-purple", size: "size-2x1", icon: icons.generic },
-        { name: "Run", link: "webpages/Run.html", color: "bg-red", size: "size-1x1", icon: icons.generic },
-        { name: "Files", link: "webpages/Files.html", color: "bg-teal", size: "size-2x1", icon: icons.generic },
-        { name: "Backup", link: "webpages/Backup.html", color: "bg-blue", size: "size-4x2", icon: icons.generic },
-        { name: "Restore", link: "webpages/Restore.html", color: "bg-yellow", size: "size-2x1", icon: icons.generic },
-        { name: "Update", link: "webpages/Update.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Power", link: "webpages/Power.html", color: "bg-red", size: "size-2x1", icon: icons.generic },
-        { name: "Battery", link: "webpages/Battery.html", color: "bg-green", size: "size-1x1", icon: icons.generic },
-        { name: "Display", link: "webpages/Display.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Sound", link: "webpages/Sound.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Mouse", link: "webpages/Mouse.html", color: "bg-teal", size: "size-1x1", icon: icons.generic },
-        { name: "Keyboard", link: "webpages/Keyboard.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Pen", link: "webpages/Pen.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Touch", link: "webpages/Touch.html", color: "bg-green", size: "size-1x1", icon: icons.generic },
-        { name: "Tablet", link: "webpages/Tablet.html", color: "bg-blue", size: "size-2x2", icon: icons.generic },
-        { name: "Phone", link: "webpages/Phone.html", color: "bg-purple", size: "size-4x2", icon: icons.generic },
-        { name: "Messages", link: "webpages/Messages.html", color: "bg-pink", size: "size-2x1", icon: icons.generic },
-        { name: "Contacts", link: "webpages/Contacts.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Log", link: "webpages/Log.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Event", link: "webpages/Event.html", color: "bg-green", size: "size-2x2", icon: icons.generic },
-        { name: "Service", link: "webpages/Service.html", color: "bg-purple", size: "size-1x1", icon: icons.generic },
-        { name: "Task Mgr", link: "webpages/TaskMgr.html", color: "bg-red", size: "size-2x2", icon: icons.generic },
-        { name: "Registry", link: "webpages/Registry.html", color: "bg-orange", size: "size-1x1", icon: icons.generic },
-        { name: "Editor", link: "webpages/Editor.html", color: "bg-yellow", size: "size-1x1", icon: icons.generic },
-        { name: "Viewer", link: "webpages/Viewer.html", color: "bg-blue", size: "size-1x1", icon: icons.generic },
-        { name: "Player", link: "webpages/Player.html", color: "bg-green", size: "size-2x1", icon: icons.generic },
-        { name: "Browser", link: "webpages/Browser.html", color: "bg-purple", size: "size-1x1", icon: icons.generic }
+        { name: "Cyberpunk Main page", link: "ideas/mainpage-cyberpunk-1.html", color: "bg-purple", size: "size-2x2", icon: icons.chat }
     ];
 
     // 2. Generate remaining 95 tiles
@@ -365,7 +286,7 @@
         return icons.generic;
     }
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 50; i++) {
         const name = getRandomItem(appNames);
         const appNum = i + 1;
         allTiles.push({
