@@ -27,3 +27,40 @@ additional features
 should have
 2 separate file upload option.
 can be able to close and replace any video/image files anytime.
+
+
+
+grok respnse.
+##############################################
+
+Build a modern single-page web app (vanilla HTML + CSS + Vanilla JavaScript, no frameworks) that does the following:
+
+Core features (must behave exactly like PowerPoint / Microsoft Office objects):
+
+1. Import images or videos  
+   - Drag-and-drop or click a button to add <img> or <video> files (local files, multiple allowed).
+
+2. Each imported media becomes a fully interactive object with:
+   - Click to select → blue border + exactly 8 resize handles (4 corners + 4 mid-sides)
+   - Drag any corner handle → resize (hold Shift = keep aspect ratio, no Shift = free stretch)
+   - Drag side handles → resize only horizontally or vertically
+   - Drag anywhere inside the object (not on handles) → move freely on the page
+   - Green rotation handle on top → drag to rotate freely (hold Shift = 15° steps)
+   - Full touch support (mobile/tablet): pinch to zoom/rotate, one-finger drag to move, etc.
+   - Selected object is brought to front (z-index)
+
+3. Snap Layouts (exactly like Windows 11)  
+   - Hover over a small “maximize-like” button (top-right of selected object) → show Windows 11-style snap layout flyout (2 columns, 3 columns, 4 quadrants, etc.)
+   - Clicking a layout instantly snaps the current object + suggests other objects to fill remaining zones (like Windows 11 Snap Assist)
+   - Support for 2, 3, and 4-zone layouts
+
+4. Additional requirements:
+   - Objects stay inside viewport (no dragging off-screen)
+   - Delete selected object with Delete or Backspace key
+   - Deselect when clicking empty area
+   - Responsive design, works perfectly on desktop and touch devices
+   - No external libraries except optional lightweight ones (e.g. interact.js if it saves a lot of code)
+   - Clean, modern look with subtle shadows and smooth animations
+   - Export current canvas as PNG (button)
+
+Provide complete, well-commented, ready-to-run HTML file (one single file preferred).
