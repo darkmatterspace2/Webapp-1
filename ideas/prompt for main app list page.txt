@@ -1,0 +1,132 @@
+Create a SINGLE, FULLY STANDALONE HTML file (one .html file only, no external CSS, JS, fonts, or libraries) that serves as the MAIN HOMEPAGE for my offline local webapp collection. Think of it like a personal Windows 8 / Metro start screen. Follow all instructions strictly and optimize for lightweight performance and clean code.
+
+REQUIREMENTS:
+
+1. The file must work fully offline. It must not load or reference any external URLs, fonts, CDNs, or resources.
+
+
+2. Use ONLY:
+
+
+
+pure HTML5
+
+pure CSS (embedded <style>)
+
+pure vanilla JavaScript (embedded <script>)
+
+
+3. DESIGN STYLE:
+
+
+
+Windows 8 / Metro UI Live Tiles
+
+Grid of 100 tiles
+
+Different tile sizes (1x1 small, 2x1 medium, 2x2 wide, 4x2 large)
+
+Bright Metro-style accent colors: blue, teal, purple, red, green, orange, yellow, pink
+
+Each tile contains:
+
+A lightweight SVG icon (inline SVG only)
+
+A text label under the icon
+
+
+On click, the tile must open the linked standalone HTML page in a new tab
+
+
+4. FIRST 5 TILES (must appear at top left, in this order):
+
+
+
+“AI Chatbot” → link: webpages/Al-chatbot.html
+
+“File Explorer” → link: webpages/file_explorer.html
+
+“Media Gallery” → link: webpages/media_gallery.html
+
+“Portfolio Dashboard” → link: webpages/portfolio_dashboard.html
+
+“Split-Screen Tool” → link: webpages/split_screen_2_image_only_v2.html
+
+
+5. REMAINING 95 TILES:
+
+
+
+Use random common app names like Calculator, Music Player, Notes, Tasks, Recorder, Stopwatch, Weather, Clock, Wallet, etc.
+
+Use alphabetical or random ordering, your choice.
+
+Link them to webpages/app1.html … webpages/app95.html
+
+No duplicate icons; reuse simple SVG shapes when needed.
+
+
+6. LAYOUT:
+
+
+
+Use CSS Grid
+
+Fully responsive (mobile, tablet, laptop)
+
+Smooth scrolling
+
+Tile spacing similar to Windows 8 start screen
+
+Tile hover animation using transform: scale(1.05) and subtle shadow
+
+No heavy animations
+
+
+7. HEADER:
+
+
+
+At the top, centered: a large elegant digital clock showing HH:MM:SS and full date
+
+Update every second using JS
+
+Do not use any external clock packages
+
+
+8. BACKGROUND:
+
+
+
+Make a very lightweight animated background: Option A: soft gradient wave animation using CSS keyframes OR Option B: ultra-light JS particle dots (under 60 lines JS)
+
+Must not exceed 150 KB total file size
+
+
+9. PERFORMANCE RULES:
+
+
+
+No external libraries at all
+
+No frameworks
+
+No image files; only CSS or inline SVG
+
+Total HTML file size must remain under 150 KB
+
+Code must be clean, readable, and modular
+
+
+10. EXTRAS:
+
+
+
+Add a tiny localStorage-based setting:
+
+Toggle: Light Mode / Dark Mode
+
+Save user preference and apply on next load
+
+
+Provide a small search bar at the top to filter tiles by name
